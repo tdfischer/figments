@@ -1,15 +1,9 @@
 use rgb::Rgb;
-use running_average::RealTimeRunningAverage;
 use core::fmt::Debug;
 
 use super::geometry::*;
 
 use crate::lib8::interpolate::Fract8Ops;
-use crate::microtick::events::*;
-use crate::microtick::properties::*;
-use crate::microtick::task::Environment;
-use crate::microtick::task::Task;
-use crate::time::Periodically;
 
 pub trait HardwarePixel: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 impl<T> HardwarePixel for T where T: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
@@ -134,62 +128,6 @@ pub trait Surface: Send + Visible {
 }
 
 pub trait Output: Sample + Send {
-    fn on_event(&mut self, event: &Event);
     fn blank(&mut self);
     fn commit(&mut self);
-}
-
-#[derive(Debug)]
-pub struct Renderer<T: Output, S: Surfaces> {
-    output: T,
-    surfaces: S,
-    fps: RealTimeRunningAverage<u32>,
-    fps_display: Periodically,
-    frame: usize,
-    frame_count: usize
-}
-
-impl<T: Output, S: Surfaces> Renderer<T, S> {
-    pub fn new(output: T, surfaces: S) -> Self {
-        Self {
-            output,
-            surfaces: surfaces,
-            fps: RealTimeRunningAverage::default(),
-            fps_display: Periodically::new_every_n_seconds(5),
-            frame: 0,
-            frame_count: 0
-        }
-    }
-}
-
-impl<T: Output, S: Surfaces> Task for Renderer<T, S> {
-    fn on_property_change(&mut self, key: PropertyID, value: &Variant, _env: &mut Environment) {
-        self.output.on_event(&Event::new_property_change(key, value.clone()));
-    }
-
-    fn on_tick(&mut self, env: &mut Environment) {
-        self.output.blank();
-
-        self.surfaces.render_to(&mut self.output, self.frame);
-
-        self.output.commit();
-
-        self.frame += 1;
-        self.fps_display.run(|| {
-            self.fps.insert((self.frame - self.frame_count) as u32);
-            self.frame_count = self.frame;
-            let fps = self.fps.measurement();
-            env.set_property(super::render::props::Output::FPS, fps.rate() as u32);
-        });
-    }
-}
-
-pub mod props {
-    use crate::property_namespace;
-
-    property_namespace!(
-        Output,
-        FPS => 0,
-        Brightness => 255
-    );
 }
