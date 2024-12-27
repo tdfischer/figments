@@ -6,7 +6,6 @@ use std::sync::{Arc, Mutex};
 use crate::lib8::interpolate::Fract8Ops;
 
 use super::geometry::*;
-use super::power::AsMilliwatts;
 use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
 
 struct ShaderBinding {
@@ -240,7 +239,7 @@ impl Surfaces for BufferedSurfacePool {
     }
 }
 
-pub trait Pixbuf: AsMilliwatts + IndexMut<usize, Output=Self::Pixel> + Send {
+pub trait Pixbuf: IndexMut<usize, Output=Self::Pixel> + Send {
     type Pixel: HardwarePixel;
     fn new() -> Self;
     fn blank(&mut self);
