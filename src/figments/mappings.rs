@@ -1,11 +1,11 @@
-use super::buffers::Pixbuf;
-use super::geometry::*;
-
-use crate::lib8::interpolate::scale8;
-use super::render::PixelView;
-
 use core::cmp::{max, min};
 use core::fmt::{Formatter, Debug};
+
+use crate::lib8::interpolate::scale8;
+
+use super::buffers::Pixbuf;
+use super::geometry::*;
+use super::render::PixelView;
 
 pub trait CoordinateView<'a>: Debug {
     type Space: CoordinateSpace;

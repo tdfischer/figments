@@ -1,13 +1,13 @@
-use super::geometry::*;
-use crate::lib8::interpolate::Fract8Ops;
-use super::power::AsMilliwatts;
-use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
-
 use std::cell::RefCell;
 use std::ops::IndexMut;
-
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+
+use crate::lib8::interpolate::Fract8Ops;
+
+use super::geometry::*;
+use super::power::AsMilliwatts;
+use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
 
 struct ShaderBinding {
     shader: Option<Box<dyn Shader>>,

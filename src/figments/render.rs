@@ -1,14 +1,16 @@
 use rgb::Rgb;
-use crate::events::*;
-use crate::properties::*;
-use super::geometry::*;
-use crate::lib8::interpolate::Fract8Ops;
-use super::power::AsMilliwatts;
-use crate::task::Environment;
-use crate::task::Task;
-use crate::time::Periodically;
 use running_average::RealTimeRunningAverage;
 use core::fmt::Debug;
+
+use super::geometry::*;
+use super::power::AsMilliwatts;
+
+use crate::lib8::interpolate::Fract8Ops;
+use crate::microtick::events::*;
+use crate::microtick::properties::*;
+use crate::microtick::task::Environment;
+use crate::microtick::task::Task;
+use crate::time::Periodically;
 
 pub trait HardwarePixel: Send + Sync + Copy + AsMilliwatts + Default + From<Rgb<u8>> + Fract8Ops {}
 impl<T> HardwarePixel for T where T: Send + Sync + Copy + AsMilliwatts + Default + From<Rgb<u8>> + Fract8Ops {}
