@@ -47,11 +47,11 @@ fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
     let x1 = lerp7by8(grad8(get_cube(aa), xx, yy), grad8(get_cube(ba), xx.wrapping_sub(n), yy), u);
     let x2 = lerp7by8(grad8(get_cube(ab), xx, yy.wrapping_sub(n)), grad8(get_cube(bb), xx.wrapping_sub(n), yy.wrapping_sub(n)), u);
 
-    return lerp7by8(x1, x2, v);
+    lerp7by8(x1, x2, v)
 }
 
 pub fn inoise8(x: i16, y: i16) -> u8 {
     let mut n = inoise8_raw(x as u16, y as u16);
     n = n.wrapping_add(64);
-    return (n as u8).saturating_add(n as u8);
+    (n as u8).saturating_add(n as u8)
 }

@@ -101,19 +101,13 @@ impl Surface for BufferedSurface {
     }
 }
 
+#[derive(Default)]
 struct UpdateQueue {
     pending: Mutex<Vec<SurfaceUpdate>>,
     damaged: AtomicBool
 }
 
 impl UpdateQueue {
-    fn new() -> Self {
-        UpdateQueue {
-            pending: Mutex::new(Vec::new()),
-            damaged: AtomicBool::new(false)
-        }
-    }
-
     fn push(&self, update: SurfaceUpdate) {
         let mut locked = self.pending.lock().unwrap();
         let mut existing_slot = None;
@@ -137,19 +131,13 @@ impl UpdateQueue {
     }
 }
 
+#[derive(Default)]
 pub struct ShaderChain {
     bindings: Vec<ShaderBinding>,
     updates: Arc<UpdateQueue>
 }
 
 impl ShaderChain {
-    pub fn new() -> Self {
-        ShaderChain {
-            bindings: Vec::new(),
-            updates: Arc::new(UpdateQueue::new())
-        }
-    }
-
     pub fn is_dirty(&self) -> bool {
         self.updates.damaged.load(std::sync::atomic::Ordering::Relaxed)
     }
@@ -213,16 +201,9 @@ impl ShaderChain {
     }
 }
 
+#[derive(Default)]
 pub struct BufferedSurfacePool {
     pool: RefCell<ShaderChain>
-}
-
-impl BufferedSurfacePool {
-    pub fn new() -> Self {
-        BufferedSurfacePool {
-            pool: RefCell::new(ShaderChain::new())
-        }
-    }
 }
 
 impl Surfaces for BufferedSurfacePool {

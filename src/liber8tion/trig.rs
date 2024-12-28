@@ -30,7 +30,7 @@ impl Trig8 for u8 {
             y = -y;
         }
         y = y.wrapping_add(128u8 as i8);
-        return y as u8;
+        y as u8
     }
 
     fn cos8(self) -> u8 {

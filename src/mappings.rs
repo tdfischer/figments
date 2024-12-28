@@ -31,7 +31,7 @@ impl CoordinateSpace for LinearSpace {
 
 pub type LinearCoords = Coordinates<LinearSpace>;
 
-impl<'a> CoordinateView<'a> for LinearCoordView {
+impl CoordinateView<'_> for LinearCoordView {
     type Space = LinearSpace;
     fn next(&mut self) -> Option<(VirtualCoordinates, LinearCoords)> {
         if self.idx as u8 == self.max_x {
@@ -39,22 +39,17 @@ impl<'a> CoordinateView<'a> for LinearCoordView {
         } else {
             let virt = VirtualCoordinates::new(self.idx as u8, 0); // FIXME: scale8
             let phys = LinearCoords::new(
-                self.idx as usize,
+                self.idx,
                 0
             );
             self.idx += 1;
-            return Some((virt, phys))
+            Some((virt, phys))
         }
     }
 }
 
+#[derive(Default)]
 pub struct LinearPixelMapping {
-}
-
-impl LinearPixelMapping {
-    pub fn new() -> Self {
-        Self {}
-    }
 }
 
 impl<'a> Select<'a> for LinearPixelMapping {
@@ -95,13 +90,15 @@ pub struct StrideMapping<const STRIDE_NUM: usize = 24> {
     rotation: u8
 }
 
-impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
-    pub fn new() -> Self {
+impl<const STRIDE_NUM: usize> Default for StrideMapping<STRIDE_NUM> {
+    fn default() -> Self {
         Self::from_json(&[
             (0, 0, 255, false)
         ])
     }
+}
 
+impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
     pub fn new_fairylights() -> Self {
         Self::from_json(&[
             (0, 0, 50, false)
@@ -254,7 +251,7 @@ pub struct StrideView<'a> {
     step_size: VirtualCoordinates
 }
 
-impl<'a> Debug for StrideView<'a> {
+impl Debug for StrideView<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("StrideView")
         .field("range", &self.range)
@@ -268,18 +265,18 @@ impl<'a> StrideView<'a> {
         // Zero-index shape of the pixel picking area
         let range: Rectangle<StrideSpace> = Rectangle::new(
             Coordinates::new(
-                scale8(map.size.width() as u8, rect.top_left.x) + map.size.left() as u8,
-                scale8(map.size.height() as u8, rect.top_left.y) + map.size.top() as u8
+                scale8(map.size.width(), rect.top_left.x) + map.size.left(),
+                scale8(map.size.height(), rect.top_left.y) + map.size.top()
             ),
             Coordinates::new(
-                scale8(map.size.width() as u8, rect.bottom_right.x) + map.size.left() as u8,
-                scale8(map.size.height() as u8, rect.bottom_right.y) + map.size.top() as u8
+                scale8(map.size.width(), rect.bottom_right.x) + map.size.left(),
+                scale8(map.size.height(), rect.bottom_right.y) + map.size.top()
             )
         );
         //log::info!("rect={:?} map.size={:?} range={:?}", rect, map.size, range);
         debug_assert!(
-            range.bottom_right.x <= map.size.width() as u8 &&
-            range.bottom_right.y <= map.size.height() as u8,
+            range.bottom_right.x <= map.size.width() &&
+            range.bottom_right.y <= map.size.height(),
             "the range for this view is out of bounds range={:?} rect={:?}, map_size={:?}",
             range,
             rect,
@@ -293,12 +290,12 @@ impl<'a> StrideView<'a> {
         );
         debug_assert_ne!(step_size.x, 0);
         debug_assert_ne!(step_size.y, 0);
-        return Self {
+        Self {
             map,
             range,
             step_size,
             cur: range.top_left
-        };
+        }
     }
 }
 
@@ -323,15 +320,15 @@ impl<'a> CoordinateView<'a> for StrideView<'a> {
             }
 
             // By now, we must be safely somewhere inside our current stride
-            debug_assert!(self.cur.y <= cur_stride.y + cur_stride.length - 1, "coords={:?} out of bounds for stride={:?} view={:?}", self.cur, cur_stride, self);
+            debug_assert!(self.cur.y < cur_stride.y + cur_stride.length, "coords={:?} out of bounds for stride={:?} view={:?}", self.cur, cur_stride, self);
 
             // Move to the next coord and return
             let physical_coords = self.cur;
             self.cur.y += 1;
 
             let virtual_coords = VirtualCoordinates::new(
-                (physical_coords.x as u8).saturating_mul(self.step_size.x),
-                (physical_coords.y as u8).saturating_mul(self.step_size.y)
+                physical_coords.x.saturating_mul(self.step_size.x),
+                physical_coords.y.saturating_mul(self.step_size.y)
             );
 
             return Some((virtual_coords,  physical_coords));
@@ -355,7 +352,7 @@ impl<'a, P: Pixbuf> StrideSampler<'a, P> {
     }
 }
 
-impl<'a, P: Pixbuf> PixelView for StrideSampler<'a, P> {
+impl<P: Pixbuf> PixelView for StrideSampler<'_, P> {
     type Pixel = P::Pixel;
     fn next(&mut self) -> Option<(Coordinates<Virtual>, &mut Self::Pixel)> {
         if let Some((virt, coords)) = self.selection.next() {

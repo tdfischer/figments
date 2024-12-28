@@ -25,7 +25,7 @@ impl Fract8Ops for u8 {
         match scale {
             0 => self,
             255 => other,
-            _ => ((((self as u16).unsigned_shl(8).bitor(other as u16)) as u16).wrapping_add(other as u16 * scale as u16).wrapping_sub(self as u16 * scale as u16)).unsigned_shr(8) as u8
+            _ => (((self as u16).unsigned_shl(8).bitor(other as u16)).wrapping_add(other as u16 * scale as u16).wrapping_sub(self as u16 * scale as u16)).unsigned_shr(8) as u8
         }
     }
 }
@@ -80,18 +80,18 @@ pub fn grad8(hash: u8, x: i8, y: i8) -> i8 {
         v = v.wrapping_neg();
     }
 
-    return avg7(u, v);
+    avg7(u, v)
 }
 
 pub fn lerp7by8(a: i8, b: i8, frac: u8) -> i8 {
     if b > a {
         let delta: u8 = b.wrapping_sub(a) as u8;
         let scaled: u8 = scale8(delta, frac);
-        return a.wrapping_add(scaled as i8);
+        a.wrapping_add(scaled as i8)
     } else {
         let delta: u8 = a.wrapping_sub(b) as u8;
         let scaled: u8 = scale8(delta, frac);
-        return a.wrapping_sub(scaled as i8);
+        a.wrapping_sub(scaled as i8)
     }
 }
 
@@ -99,11 +99,11 @@ pub fn lerp8by8(a: u8, b: u8, frac: u8) -> u8 {
     if b > a {
         let delta = b - a;
         let scaled = scale8(delta, frac);
-        return a + scaled;
+        a + scaled
     } else {
         let delta = a - b;
         let scaled = scale8(delta, frac);
-        return a - scaled;
+        a - scaled
     }
 }
 
@@ -111,7 +111,7 @@ pub fn map8(x: u8, range_start: u8, range_end: u8) -> u8 {
     let range_width = range_end - range_start;
     let mut out = scale8(x, range_width);
     out += range_start;
-    return out;
+    out
 }
 
 pub fn ease_in_out_quad(i: u8) -> u8 {
@@ -123,8 +123,8 @@ pub fn ease_in_out_quad(i: u8) -> u8 {
     let jj = scale8(j, j);
     let jj2 = jj.unsigned_shl(1);
     if i & 0x80 == 0 {
-        return jj2
+        jj2
     } else {
-        return 255 - jj2;
+        255 - jj2
     }
 }
