@@ -1,0 +1,15 @@
+[package]
+name = "figments"
+version = "0.1.0"
+authors = ["tdfischer"]
+edition = "2021"
+resolver = "2"
+rust-version = "1.77"
+
+[lib]
+name = "figments"
+
+[dependencies]
+rgb = "0.8.50"
+num = "0.4.3"
+log = "0.4.22"
