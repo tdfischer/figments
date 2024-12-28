@@ -1,10 +1,16 @@
 [package]
 name = "figments"
+description = "A high performance graphics API for microcontrollers"
+readme = "README.md"
+repository = "https://github.com/tdfischer/figments"
+keywords = ["ws2812", "esp32", "smart-leds", "embedded-graphics"]
+categories = ["graphics", "embedded", "rendering::engine"]
 version = "0.1.0"
 authors = ["tdfischer"]
 edition = "2021"
 resolver = "2"
 rust-version = "1.77"
+license = "LGPL-2.1-or-later"
 
 [lib]
 name = "figments"
