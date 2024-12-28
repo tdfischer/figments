@@ -1,7 +1,7 @@
 pub use crate::{
     geometry::*,
     render::*,
-    buffers::*,
+    pixbuf::*,
     liber8tion::{
         Hsv,
         IntoRgb8

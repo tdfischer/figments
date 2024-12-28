@@ -1,3 +1,4 @@
+#![doc = "A partial rust implementation of FastLED's lib8tion for fast 8 bit math on microcontrollers"]
 pub mod interpolate;
 pub mod noise;
 pub mod trig;

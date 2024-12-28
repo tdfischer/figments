@@ -1,3 +1,4 @@
+#![doc = "Pixel buffer types"]
 use std::cell::RefCell;
 use std::ops::IndexMut;
 use std::sync::atomic::AtomicBool;
@@ -52,6 +53,7 @@ impl Default for SurfaceUpdate {
     }
 }
 
+/// A thread-safe [Surface] implementation where changes are buffered before they are committed in batches
 pub struct BufferedSurface {
     updater: Arc<UpdateQueue>,
     slot: usize
@@ -130,7 +132,7 @@ impl UpdateQueue {
 }
 
 #[derive(Default)]
-pub struct ShaderChain {
+struct ShaderChain {
     bindings: Vec<ShaderBinding>,
     updates: Arc<UpdateQueue>
 }
@@ -199,6 +201,7 @@ impl ShaderChain {
     }
 }
 
+/// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
 #[derive(Default)]
 pub struct BufferedSurfacePool {
     pool: RefCell<ShaderChain>
@@ -218,11 +221,22 @@ impl Surfaces for BufferedSurfacePool {
     }
 }
 
+/// Types that provide access to a buffer of pixels, which may or may not be hardware based
+/// 
+/// This trait requires [IndexMut] so you can acccess individual pixels by index
 pub trait Pixbuf: IndexMut<usize, Output=Self::Pixel> + Send {
+    /// The underlying hardware pixel type
     type Pixel: HardwarePixel;
+    /// Creates a new Pixbuf that may or may not contain default pixel values (eg, black)
     fn new() -> Self;
+
+    /// Blanks the pixels, usually to black
     fn blank(&mut self);
+
+    /// Iterates over all the pixels in the buffer
     fn iter_with_brightness(&self, brightness: u8) -> impl Iterator<Item = Self::Pixel> + Send;
+
+    /// Returns the number of pixels accessable through this buffer
     fn pixel_count(&self) -> usize;
 }
 

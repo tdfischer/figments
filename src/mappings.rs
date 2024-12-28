@@ -1,34 +1,46 @@
+//! Mapppings between coordinate spaces
 use core::cmp::{max, min};
 use core::fmt::{Formatter, Debug};
 
 use crate::liber8tion::interpolate::scale8;
 
-use super::buffers::Pixbuf;
+use super::pixbuf::Pixbuf;
 use super::geometry::*;
 use super::render::PixelView;
 
+/// Iterator-ish type that maps a range of [Virtual] coordinates to another [CoordinateSpace].
 pub trait CoordinateView<'a>: Debug {
+    /// Target space that [Virtual] coordinates are mapped to
     type Space: CoordinateSpace;
+
+    /// Returns the next coordinate, or None
     fn next(&mut self) -> Option<(Coordinates<Virtual>, Coordinates<Self::Space>)>;
 }
 
+/// Trait that provides a [CoordinateView] over a given [Rectangle] of [Virtual] coordinates
 pub trait Select<'a> {
+    /// The output space
     type Space: CoordinateSpace;
+    /// The resulting coordinate view type
     type View: CoordinateView<'a>;
+    /// Selects a range of [Virtual] coordinates for mapping to another [CoordinateSpace]
     fn select(&'a self, rect: &Rectangle<Virtual>) -> Self::View;
 }
 
+/// A naive mapping from 2d [Virtual] coordinates into a [LinearSpace]
 #[derive(Debug)]
 pub struct LinearCoordView {
     max_x: u8,
     idx: usize,
 }
 
+/// Linear coordinate space where Y is meaningless
 pub struct LinearSpace {}
 impl CoordinateSpace for LinearSpace {
     type Data = usize;
 }
 
+/// Linear coordinate type
 pub type LinearCoords = Coordinates<LinearSpace>;
 
 impl CoordinateView<'_> for LinearCoordView {
@@ -48,11 +60,12 @@ impl CoordinateView<'_> for LinearCoordView {
     }
 }
 
+/// A mapping between [Virtual] coordinates and a 'linear' space where only X matters. For example, a single long strip of pixels
 #[derive(Default)]
-pub struct LinearPixelMapping {
+pub struct LinearCoordMapping {
 }
 
-impl<'a> Select<'a> for LinearPixelMapping {
+impl<'a> Select<'a> for LinearCoordMapping {
     type Space = LinearSpace;
     type View = LinearCoordView;
     fn select(&'a self, rect: &Rectangle<Virtual>) -> Self::View {
@@ -64,7 +77,7 @@ impl<'a> Select<'a> for LinearPixelMapping {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Stride {
+struct Stride {
     pub length: u8,
     pub x: u8,
     pub y: u8,
@@ -82,10 +95,15 @@ impl Stride {
     }
 }
 
+/// A mapping between 2d [Virtual] coordinates and a 2d display composed of individual strips of pixels
 #[derive(Debug)]
 pub struct StrideMapping<const STRIDE_NUM: usize = 24> {
-    pub strides: [Stride; STRIDE_NUM],
+    strides: [Stride; STRIDE_NUM],
+
+    /// The number of physical pixels in this map
     pub pixel_count: usize,
+
+    /// The physical size of the display this map is configured for
     pub size: Rectangle<StrideSpace>,
     rotation: u8
 }
@@ -99,6 +117,7 @@ impl<const STRIDE_NUM: usize> Default for StrideMapping<STRIDE_NUM> {
 }
 
 impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
+    /// Creates a new stride mapping from a sequence of (x, y, pixel_num, reversed)
     pub fn from_json(stride_json: &[(u8, u8, u8, bool)]) -> Self {
         let mut strides = [Stride::default(); STRIDE_NUM];
         let stride_count = stride_json.len();
@@ -153,15 +172,18 @@ impl<'a> Select<'a> for StrideMapping {
     }
 }
 
+/// A [CoordinateSpace] where Y means which segment along a strip of LEDs, and X is which pixel within that segment
 #[derive(Debug, Clone, Copy)]
 pub struct StrideSpace {}
 impl CoordinateSpace for StrideSpace {
     type Data = u8;
 }
+/// Coordinates within the stride space
 pub type StrideCoords = Coordinates<StrideSpace>;
 
+/// A [CoordinateView] that maps [Virtual] coordinates to stride based coordinates
 pub struct StrideView<'a> {
-    pub map: &'a StrideMapping,
+    map: &'a StrideMapping,
     range: Rectangle<StrideSpace>,
     cur: StrideCoords,
     step_size: VirtualCoordinates
@@ -251,12 +273,14 @@ impl<'a> CoordinateView<'a> for StrideView<'a> {
     }
 }
 
+/// Pixel sampler for a [StrideView]
 pub struct StrideSampler<'a, P: Pixbuf> {
     pixbuf: &'a mut P,
     selection: StrideView<'a>
 }
 
 impl<'a, P: Pixbuf> StrideSampler<'a, P> {
+    /// Creates a new sampler over the given [StrideView] against the given pixebuf
     pub fn new(pixbuf: &'a mut P, selection: StrideView<'a>) -> Self {
         StrideSampler {
             pixbuf,
