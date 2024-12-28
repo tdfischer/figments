@@ -3,7 +3,7 @@ use std::ops::IndexMut;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
-use crate::lib8::interpolate::Fract8Ops;
+use crate::liber8tion::interpolate::Fract8Ops;
 
 use super::geometry::*;
 use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};

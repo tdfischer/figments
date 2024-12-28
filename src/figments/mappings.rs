@@ -1,7 +1,7 @@
 use core::cmp::{max, min};
 use core::fmt::{Formatter, Debug};
 
-use crate::lib8::interpolate::scale8;
+use crate::liber8tion::interpolate::scale8;
 
 use super::buffers::Pixbuf;
 use super::geometry::*;

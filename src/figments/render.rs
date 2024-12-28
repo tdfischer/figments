@@ -3,7 +3,7 @@ use core::fmt::Debug;
 
 use super::geometry::*;
 
-use crate::lib8::interpolate::Fract8Ops;
+use crate::liber8tion::interpolate::Fract8Ops;
 
 pub trait HardwarePixel: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 impl<T> HardwarePixel for T where T: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
