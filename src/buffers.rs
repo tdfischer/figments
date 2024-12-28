@@ -119,11 +119,9 @@ impl UpdateQueue {
         }
         match existing_slot {
             Some(tgt) => {
-                log::debug!("Updating existing shader update");
                 tgt.merge(update);
             }
             _ => {
-                log::debug!("Pushing new shader update");
                 locked.push(update);
                 self.damaged.store(true, std::sync::atomic::Ordering::Relaxed);
             }

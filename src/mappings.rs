@@ -99,87 +99,6 @@ impl<const STRIDE_NUM: usize> Default for StrideMapping<STRIDE_NUM> {
 }
 
 impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
-    pub fn new_fairylights() -> Self {
-        Self::from_json(&[
-            (0, 0, 50, false)
-        ])
-    }
-
-    pub fn new_cyberplague() -> Self {
-        Self::from_json(&[
-            (0, 6, 6, false),
-            (1, 6, 6, true),
-            (2, 6, 6, false),
-            (3, 4, 9, true),
-            (4, 4, 14, false),
-            (5, 0, 17, true),
-            (6, 2, 12, false),
-            (7, 0, 18, true),
-            (8, 4, 14, false),
-            (9, 5, 9, true),
-            (10, 4, 7, false),
-            (11, 5, 6, true),
-            (12, 5, 6, false)
-        ])
-    }
-
-    pub fn new_jar() -> Self {
-        Self::from_json(&[
-            (0, 0, 17, false),
-            (1, 0, 17, false),
-            (2, 0, 17, false),
-            (3, 0, 17, false),
-            (4, 0, 16, false),
-            (5, 0, 17, false),
-            (6, 0, 17, false),
-            (7, 0, 17, false),
-            (8, 0, 17, false),
-            (9, 0, 17, false),
-            (10, 0, 17, false),
-            (11, 0, 17, false),
-            (12, 0, 18, false),
-            (13, 0, 17, false),
-            (14, 0, 18, false),
-            (15, 0, 17, false),
-            (16, 0, 17, false),
-            (17, 0, 17, false)
-        ])
-    }
-
-    pub fn new_panel() -> Self {
-        Self::from_json(&[
-            (0, 0, 16, false),
-            (1, 0, 16, true),
-            (2, 0, 16, false),
-            (3, 0, 16, true),
-            (4, 0, 16, false),
-            (5, 0, 16, true),
-            (6, 0, 16, false),
-            (7, 0, 16, true),
-            (8, 0, 16, false),
-            (9, 0, 16, true),
-            (10, 0, 16, false),
-            (11, 0, 16, true),
-            (12, 0, 16, false),
-            (13, 0, 16, true),
-            (14, 0, 16, false),
-            (15, 0, 16, true),
-        ])
-    }
-
-    pub fn new_albus() -> Self {
-        Self::from_json(&[
-            (0, 0, 29, false),
-            (1, 0, 20, false),
-            (2, 0, 22, false),
-            (3, 0, 19, false),
-            (4, 0, 12, false),
-            (5, 0, 14, false),
-            (6, 0, 16, false),
-            (7, 0, 19, false),
-        ])
-    }
-
     pub fn from_json(stride_json: &[(u8, u8, u8, bool)]) -> Self {
         let mut strides = [Stride::default(); STRIDE_NUM];
         let stride_count = stride_json.len();
@@ -215,15 +134,12 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
                     )
                 )
             });
-            log::info!("stride={:?} size={:?}", strides[stride_idx], size);
         }
-        let s = size.take().unwrap();
-        log::info!("size={:?}", s);
 
         Self {
             strides,
             pixel_count: physical_idx,
-            size: s,
+            size: size.unwrap(),
             rotation: 2
         }
     }
@@ -273,7 +189,6 @@ impl<'a> StrideView<'a> {
                 scale8(map.size.height(), rect.bottom_right.y) + map.size.top()
             )
         );
-        //log::info!("rect={:?} map.size={:?} range={:?}", rect, map.size, range);
         debug_assert!(
             range.bottom_right.x <= map.size.width() &&
             range.bottom_right.y <= map.size.height(),
@@ -285,8 +200,6 @@ impl<'a> StrideView<'a> {
         let step_size = VirtualCoordinates::new(
             u8::MAX / core::cmp::max(1, range.width()),
             u8::MAX / core::cmp::max(1, range.height())
-            //scale8(255, std::cmp::max(1, range.bottom_right.x - range.top_left.x)),
-            //scale8(255, std::cmp::max(1, range.bottom_right.y - range.top_left.y))
         );
         debug_assert_ne!(step_size.x, 0);
         debug_assert_ne!(step_size.y, 0);

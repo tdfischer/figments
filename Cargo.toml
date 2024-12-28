@@ -16,6 +16,5 @@ license = "LGPL-2.1-or-later"
 name = "figments"
 
 [dependencies]
-rgb = "0.8.50"
-num = "0.4.3"
-log = "0.4.22"
+rgb = "0.8"
+num = "0.4"
