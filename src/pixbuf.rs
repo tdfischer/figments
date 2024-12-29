@@ -1,7 +1,7 @@
 #![doc = "Pixel buffer types"]
-use std::cell::RefCell;
-use std::ops::IndexMut;
-use std::sync::atomic::AtomicBool;
+use core::cell::RefCell;
+use core::ops::IndexMut;
+use core::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use crate::liber8tion::interpolate::Fract8Ops;
@@ -125,7 +125,7 @@ impl UpdateQueue {
             }
             _ => {
                 locked.push(update);
-                self.damaged.store(true, std::sync::atomic::Ordering::Relaxed);
+                self.damaged.store(true, core::sync::atomic::Ordering::Relaxed);
             }
         }
     }
@@ -139,14 +139,14 @@ struct ShaderChain {
 
 impl ShaderChain {
     pub fn is_dirty(&self) -> bool {
-        self.updates.damaged.load(std::sync::atomic::Ordering::Relaxed)
+        self.updates.damaged.load(core::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn commit(&mut self) {
         if self.is_dirty() {
             let mut queue: Vec<SurfaceUpdate> = {
                 let mut updates = self.updates.pending.lock().unwrap();
-                std::mem::take(updates.as_mut())
+                core::mem::take(updates.as_mut())
             };
             for update in queue.iter_mut() {
                 let target_slot = &mut self.bindings[update.slot];
@@ -163,7 +163,7 @@ impl ShaderChain {
                     target_slot.visible = visible;
                 }
             }
-            self.updates.damaged.store(false, std::sync::atomic::Ordering::Relaxed);
+            self.updates.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
         }
     }
 
