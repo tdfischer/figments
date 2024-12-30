@@ -153,11 +153,3 @@ pub trait Surface: Send + Visible {
     /// Changes the size of the surface
     fn set_rect(&mut self, rect: Rectangle<Virtual>);
 }
-
-/// A hardware output that provides an interface to the underlying hardware pixels, including actually turning pixels into photons
-pub trait Output: Sample + Send {
-    /// Blanks the output. Usually this means all pixels are set to black
-    fn blank(&mut self);
-    /// Commits the contents of the underlying pixel buffers to hardware
-    fn commit(&mut self);
-}
