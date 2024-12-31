@@ -1,3 +1,7 @@
+use std::cmp::max;
+use std::cmp::min;
+
+use figments::liber8tion::interpolate::Fract8Ops;
 use figments::liber8tion::trig::sin8;
 use figments::mappings::*;
 use figments::prelude::*;
@@ -50,7 +54,10 @@ fn main() {
         // 
         let mut sampler = LinearSampler::new(&mut pixbuf);
         surfaces.render_to(&mut sampler, frame_idx);
-        target.write(pixbuf.iter_with_brightness(5)).unwrap();
+
+        let brightness = min(5, sin8((frame_idx / 5) as u8));
+        target.write(pixbuf.iter().map(move |x| { x.scale8(brightness)})).unwrap();
+
         frame_idx = frame_idx.wrapping_add(1);
         frame_count += 1;
         if frame_count == 1000 {

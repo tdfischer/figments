@@ -3,6 +3,7 @@ use core::cell::RefCell;
 use core::ops::IndexMut;
 use core::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use rgb::Rgb;
 
 use crate::liber8tion::interpolate::Fract8Ops;
 
@@ -210,11 +211,12 @@ pub struct BufferedSurfacePool {
 impl Surfaces for BufferedSurfacePool {
     type Error = ();
     type Surface = BufferedSurface;
+    type Pixel = Rgb<u8>;
     fn new_surface(&mut self, area: super::geometry::Rectangle<super::geometry::Virtual>) -> Result<Self::Surface, Self::Error> {
         self.pool.borrow_mut().new_surface(area)
     }
 
-    fn render_to<S: super::render::Sample>(&self, output: &mut S, frame: usize) {
+    fn render_to<S: super::render::Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: usize) {
         let mut b = self.pool.borrow_mut();
         b.commit();
         b.render_to(output, frame);
@@ -233,9 +235,6 @@ pub trait Pixbuf: IndexMut<usize, Output=Self::Pixel> + Send {
     /// Blanks the pixels, usually to black
     fn blank(&mut self);
 
-    /// Iterates over all the pixels in the buffer
-    fn iter_with_brightness(&self, brightness: u8) -> impl Iterator<Item = Self::Pixel> + Send;
-
     /// Returns the number of pixels accessable through this buffer
     fn pixel_count(&self) -> usize;
 }
@@ -252,9 +251,5 @@ impl<T: HardwarePixel, const PIXEL_NUM: usize> Pixbuf for [T; PIXEL_NUM] {
 
     fn blank(&mut self) {
         self.fill(T::default())
-    }
-
-    fn iter_with_brightness(&self, brightness: u8) -> impl Iterator<Item=T> + Send {
-        self.iter().map(move |x| { x.scale8(brightness)})
     }
 }

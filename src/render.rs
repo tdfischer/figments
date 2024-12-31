@@ -44,8 +44,9 @@ impl<T> Shader for T where T: 'static + Send + Fn(&VirtualCoordinates, usize) ->
 pub trait Surfaces: Send {
     type Surface: Surface;
     type Error: Debug;
+    type Pixel: HardwarePixel;
     fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<Self::Surface, Self::Error>;
-    fn render_to<S: Sample>(&self, output: &mut S, frame: usize);
+    fn render_to<S: Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: usize);
 }
 
 /// Helper trait for allowing some [Surface] properties to be set when they are in a slice or array 
