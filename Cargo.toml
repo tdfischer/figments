@@ -16,7 +16,8 @@ license = "LGPL-2.1-or-later"
 name = "figments"
 
 [features]
-esp32-examples = ["dep:ws2812-esp32-rmt-driver", "esp-idf-svc/binstart", "esp-idf-svc/std", "esp-idf-svc/native", "esp-idf-svc/alloc", "smart-leds", "dep:running-average", "dep:log"]
+esp32-examples = ["dep:ws2812-esp32-rmt-driver", "espidf", "dep:smart-leds", "dep:running-average", "dep:log"]
+espidf = ["esp-idf-svc/binstart", "esp-idf-svc/std", "esp-idf-svc/native", "esp-idf-svc/alloc"]
 
 [dependencies]
 rgb = "0.8"
