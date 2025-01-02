@@ -4,28 +4,37 @@ use core::ops::IndexMut;
 use core::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use rgb::Rgb;
+use core::fmt::{Debug, Formatter};
 
 use crate::liber8tion::interpolate::Fract8Ops;
 
 use super::geometry::*;
 use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
 
-struct ShaderBinding {
-    shader: Option<Box<dyn Shader>>,
+struct ShaderBinding<U> {
+    shader: Option<Box<dyn Shader<U>>>,
     rect: Rectangle<Virtual>,
     opacity: u8,
     visible: bool
 }
 
-struct SurfaceUpdate {
-    shader: Option<Option<Box<dyn Shader>>>,
+struct SurfaceUpdate<U> {
+    shader: Option<Option<Box<dyn Shader<U>>>>,
     rect: Option<Rectangle<Virtual>>,
     opacity: Option<u8>,
     visible: Option<bool>,
     slot: usize,
 }
 
-impl SurfaceUpdate {
+impl<U> Debug for SurfaceUpdate<U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("SurfaceUpdate")
+            .field("slot", &self.slot)
+            .finish()
+    }
+}
+
+impl<U> SurfaceUpdate<U> {
     fn merge(&mut self, mut other: Self) {
         if other.shader.is_some() {
             self.shader = other.shader.take()
@@ -42,7 +51,7 @@ impl SurfaceUpdate {
     }
 }
 
-impl Default for SurfaceUpdate {
+impl<U> Default for SurfaceUpdate<U> {
     fn default() -> Self {
         SurfaceUpdate {
             shader: None,
@@ -55,12 +64,12 @@ impl Default for SurfaceUpdate {
 }
 
 /// A thread-safe [Surface] implementation where changes are buffered before they are committed in batches
-pub struct BufferedSurface {
-    updater: Arc<UpdateQueue>,
+pub struct BufferedSurface<U> {
+    updater: Arc<UpdateQueue<U>>,
     slot: usize
 }
 
-impl Visible for BufferedSurface {
+impl<U> Visible for BufferedSurface<U> {
     fn set_opacity(&mut self, opacity: u8) {
         self.updater.push(SurfaceUpdate {
             opacity: Some(opacity),
@@ -78,7 +87,7 @@ impl Visible for BufferedSurface {
     }
 }
 
-impl Surface for BufferedSurface {
+impl<U> Surface<U> for BufferedSurface<U> {
     fn clear_shader(&mut self) {
         self.updater.push(SurfaceUpdate {
             shader: Some(None),
@@ -95,7 +104,7 @@ impl Surface for BufferedSurface {
         });
     }
 
-    fn set_shader<T: Shader>(&mut self, shader: T) {
+    fn set_shader<T: Shader<U>>(&mut self, shader: T) {
         self.updater.push(SurfaceUpdate {
             shader: Some(Some(Box::new(shader))),
             slot: self.slot,
@@ -105,13 +114,13 @@ impl Surface for BufferedSurface {
 }
 
 #[derive(Default)]
-struct UpdateQueue {
-    pending: Mutex<Vec<SurfaceUpdate>>,
+struct UpdateQueue<U> {
+    pending: Mutex<Vec<SurfaceUpdate<U>>>,
     damaged: AtomicBool
 }
 
-impl UpdateQueue {
-    fn push(&self, update: SurfaceUpdate) {
+impl<U> UpdateQueue<U> {
+    fn push(&self, update: SurfaceUpdate<U>) {
         let mut locked = self.pending.lock().unwrap();
         let mut existing_slot = None;
         for existing in locked.iter_mut() {
@@ -133,19 +142,19 @@ impl UpdateQueue {
 }
 
 #[derive(Default)]
-struct ShaderChain {
-    bindings: Vec<ShaderBinding>,
-    updates: Arc<UpdateQueue>
+struct ShaderChain<U> {
+    bindings: Vec<ShaderBinding<U>>,
+    updates: Arc<UpdateQueue<U>>
 }
 
-impl ShaderChain {
+impl<U: 'static> ShaderChain<U> {
     pub fn is_dirty(&self) -> bool {
         self.updates.damaged.load(core::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn commit(&mut self) {
         if self.is_dirty() {
-            let mut queue: Vec<SurfaceUpdate> = {
+            let mut queue: Vec<SurfaceUpdate<U>> = {
                 let mut updates = self.updates.pending.lock().unwrap();
                 core::mem::take(updates.as_mut())
             };
@@ -168,7 +177,7 @@ impl ShaderChain {
         }
     }
 
-    fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<BufferedSurface, ()> {
+    fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<BufferedSurface<U>, ()> {
         let next_slot = self.bindings.len();
         self.bindings.push(ShaderBinding {
             opacity: 255,
@@ -183,7 +192,7 @@ impl ShaderChain {
         })
     }
 
-    fn render_to<S: Sample>(&self, output: &mut S, frame: usize) {
+    fn render_to<S: Sample>(&self, output: &mut S, frame: &U) {
         for surface in &self.bindings {
             let opacity = surface.opacity;
             if opacity > 0 && surface.visible {
@@ -204,19 +213,21 @@ impl ShaderChain {
 
 /// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
 #[derive(Default)]
-pub struct BufferedSurfacePool {
-    pool: RefCell<ShaderChain>
+pub struct BufferedSurfacePool<U> {
+    pool: RefCell<ShaderChain<U>>
 }
 
-impl Surfaces for BufferedSurfacePool {
+impl<U: 'static> Surfaces for BufferedSurfacePool<U> {
     type Error = ();
-    type Surface = BufferedSurface;
+    type Surface = BufferedSurface<U>;
     type Pixel = Rgb<u8>;
+    type Uniforms = U;
+
     fn new_surface(&mut self, area: super::geometry::Rectangle<super::geometry::Virtual>) -> Result<Self::Surface, Self::Error> {
         self.pool.borrow_mut().new_surface(area)
     }
 
-    fn render_to<S: super::render::Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: usize) {
+    fn render_to<S: super::render::Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: &U) {
         let mut b = self.pool.borrow_mut();
         b.commit();
         b.render_to(output, frame);

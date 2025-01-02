@@ -38,8 +38,8 @@ fn main() {
 
     // The real magic happens here: Creating a new surface and attaching a shader
     let _sfc = SurfaceBuilder::build(&mut surfaces)
-        .shader(|coords: &Coordinates<Virtual>, frame: usize| {
-            Hsv::new(sin8(coords.x.wrapping_add(frame as u8)), 255, 255).into_rgb8()
+        .shader(|coords: &Coordinates<Virtual>, frame: &usize| {
+            Hsv::new(sin8(coords.x.wrapping_add(*frame as u8)), 255, 255).into_rgb8()
         })
         .finish().unwrap();
 
@@ -53,7 +53,7 @@ fn main() {
     loop {
         // 
         let mut sampler = LinearSampler::new(&mut pixbuf);
-        surfaces.render_to(&mut sampler, frame_idx);
+        surfaces.render_to(&mut sampler, &frame_idx);
 
         let brightness = min(5, sin8((frame_idx / 5) as u8));
         target.write(pixbuf.iter().map(move |x| { x.scale8(brightness)})).unwrap();
