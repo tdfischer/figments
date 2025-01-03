@@ -1,6 +1,7 @@
 //! The core rendering engine types
 use rgb::Rgb;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 
 use super::geometry::*;
 
@@ -29,24 +30,25 @@ pub trait Sample {
 }
 
 /// Types that can provide an RGB color given a location in [Virtual] space
-pub trait Shader: Send + 'static {
+pub trait Shader<Uniforms>: Send + 'static {
     /// Turns a [Virtual] coordinate into a real pixel color
-    fn draw(&self, surface_coords: &VirtualCoordinates, frame: usize) -> Rgb<u8>;
+    fn draw(&self, surface_coords: &VirtualCoordinates, uniforms: &Uniforms) -> Rgb<u8>;
 }
 
-impl<T> Shader for T where T: 'static + Send + Fn(&VirtualCoordinates, usize) -> Rgb<u8> {
-    fn draw(&self, surface_coords: &VirtualCoordinates, frame: usize) -> Rgb<u8> {
-        self(surface_coords, frame)
+impl<T, U> Shader<U> for T where T: 'static + Send + Fn(&VirtualCoordinates, &U) -> Rgb<u8> {
+    fn draw(&self, surface_coords: &VirtualCoordinates, uniforms: &U) -> Rgb<u8> {
+        self(surface_coords, uniforms)
     }
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
 pub trait Surfaces: Send {
-    type Surface: Surface;
+    type Uniforms;
+    type Surface: Surface<Self::Uniforms>;
     type Error: Debug;
     type Pixel: HardwarePixel;
     fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<Self::Surface, Self::Error>;
-    fn render_to<S: Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: usize);
+    fn render_to<S: Sample<Pixel = Self::Pixel>>(&self, output: &mut S, uniforms: &Self::Uniforms);
 }
 
 /// Helper trait for allowing some [Surface] properties to be set when they are in a slice or array 
@@ -73,15 +75,16 @@ impl<T: Visible> Visible for [T] {
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, S: Surface, SS: Surfaces<Surface = S>, SF: Shader> {
+pub struct SurfaceBuilder<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<Virtual>>,
     opacity: Option<u8>,
     shader: Option<SF>,
-    visible: Option<bool>
+    visible: Option<bool>,
+    _uniform: PhantomData<U>
 }
 
-impl<'a, S: Surface, SS: Surfaces<Surface = S>, SF: Shader> SurfaceBuilder<'a, S, SS, SF> {
+impl<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> SurfaceBuilder<'a, S, SS, SF, U> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -89,7 +92,8 @@ impl<'a, S: Surface, SS: Surfaces<Surface = S>, SF: Shader> SurfaceBuilder<'a, S
             opacity: None,
             shader: None,
             rect: None,
-            visible: None
+            visible: None,
+            _uniform: PhantomData
         }
     }
 
@@ -144,9 +148,9 @@ impl<'a, S: Surface, SS: Surfaces<Surface = S>, SF: Shader> SurfaceBuilder<'a, S
 }
 
 /// A rectangular set of pixels that can be drawn on with a [Shader]
-pub trait Surface: Send + Visible {
+pub trait Surface<U>: Send + Visible {
     /// Sets the shader for this surface
-    fn set_shader<T: Shader>(&mut self, shader: T);
+    fn set_shader<T: Shader<U>>(&mut self, shader: T);
 
     /// Clears the shader
     fn clear_shader(&mut self);
