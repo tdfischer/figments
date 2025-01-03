@@ -2,14 +2,19 @@
 use core::cell::RefCell;
 use core::ops::IndexMut;
 use core::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use alloc::sync::Arc;
 use rgb::Rgb;
 use core::fmt::{Debug, Formatter};
+use ringbuf::{traits::*, HeapRb};
 
 use crate::liber8tion::interpolate::Fract8Ops;
 
 use super::geometry::*;
 use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
+use super::atomics::AtomicMutex;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 struct ShaderBinding<U> {
     shader: Option<Box<dyn Shader<U>>>,
@@ -113,10 +118,18 @@ impl<U> Surface<U> for BufferedSurface<U> {
     }
 }
 
-#[derive(Default)]
 struct UpdateQueue<U> {
-    pending: Mutex<Vec<SurfaceUpdate<U>>>,
+    pending: AtomicMutex<HeapRb<SurfaceUpdate<U>>>,
     damaged: AtomicBool
+}
+
+impl<U> Default for UpdateQueue<U> {
+    fn default() -> Self {
+        Self {
+            pending: AtomicMutex::new(HeapRb::new(8)),
+            damaged: AtomicBool::new(false)
+        }
+    }
 }
 
 impl<U> UpdateQueue<U> {
@@ -134,9 +147,20 @@ impl<U> UpdateQueue<U> {
                 tgt.merge(update);
             }
             _ => {
-                locked.push(update);
+                locked.try_push(update).unwrap();
                 self.damaged.store(true, core::sync::atomic::Ordering::Relaxed);
             }
+        }
+    }
+
+    fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U>>> {
+        if self.damaged.load(core::sync::atomic::Ordering::Relaxed) {
+            let mut updates = self.pending.lock().unwrap();
+            let next = HeapRb::new(8);
+            self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
+            Some(core::mem::replace(updates.as_mut(), next))
+        } else {
+            None
         }
     }
 }
@@ -148,16 +172,8 @@ struct ShaderChain<U> {
 }
 
 impl<U: 'static> ShaderChain<U> {
-    pub fn is_dirty(&self) -> bool {
-        self.updates.damaged.load(core::sync::atomic::Ordering::Relaxed)
-    }
-
     pub fn commit(&mut self) {
-        if self.is_dirty() {
-            let mut queue: Vec<SurfaceUpdate<U>> = {
-                let mut updates = self.updates.pending.lock().unwrap();
-                core::mem::take(updates.as_mut())
-            };
+        if let Some(mut queue) = self.updates.try_take() {
             for update in queue.iter_mut() {
                 let target_slot = &mut self.bindings[update.slot];
                 if let Some(shader) = update.shader.take() {
@@ -173,7 +189,6 @@ impl<U: 'static> ShaderChain<U> {
                     target_slot.visible = visible;
                 }
             }
-            self.updates.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
         }
     }
 
