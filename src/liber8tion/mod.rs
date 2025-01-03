@@ -17,6 +17,7 @@ impl IntoRgb8 for Rgb<u8> {
     }
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Hsv {
     pub hue: u8,
     pub saturation: u8,
