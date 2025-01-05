@@ -1,4 +1,4 @@
 fn main() {
-    #[cfg(feature = "esp32-examples")]
+    #[cfg(features="espidf")]
     embuild::espidf::sysenv::output();
 }
