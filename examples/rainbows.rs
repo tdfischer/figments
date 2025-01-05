@@ -55,6 +55,7 @@ fn main() {
         let mut sampler = LinearSampler::new(&mut pixbuf);
         surfaces.render_to(&mut sampler, &frame_idx);
 
+        // Scale the brightness down to 5/255, otherwise a full-size strip will trigger a brownout as soon as it lights up.
         let brightness = min(5, sin8((frame_idx / 5) as u8));
         target.write(pixbuf.iter().map(move |x| { x.scale8(brightness)})).unwrap();
 

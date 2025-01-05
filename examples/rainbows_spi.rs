@@ -34,7 +34,6 @@ fn main() {
     let peripherals = Peripherals::take().unwrap();
 
     // First, let's create the underlying WS2812 smart-leds target on GPIO5 using RMT:
-    //let mut target = FastWs2812Esp32Rmt::new(peripherals.rmt.channel0, peripherals.pins.gpio5).unwrap();
     let driver = SpiDriver::new_without_sclk(
         peripherals.spi2,
         peripherals.pins.gpio5,
@@ -65,6 +64,7 @@ fn main() {
     let mut frame_count = 0;
     let mut fps = RealTimeRunningAverage::default();
 
+    // For some reason, driving LEDs with SPI causes the idle task to never run, so lets disable the watchdog. Its just an example...
     unsafe {
         esp_idf_svc::hal::sys::esp_task_wdt_delete(esp_idf_svc::hal::sys::xTaskGetIdleTaskHandleForCore(esp_idf_svc::hal::cpu::core() as i32));
         esp_idf_svc::hal::sys::esp_task_wdt_add(esp_idf_svc::hal::sys::xTaskGetCurrentTaskHandle());
@@ -75,6 +75,7 @@ fn main() {
         let mut sampler = LinearSampler::new(&mut pixbuf);
         surfaces.render_to(&mut sampler, &frame_idx);
 
+        // Scale the brightness down to 5/255, otherwise a full-size strip will trigger a brownout as soon as it lights up.
         let brightness = min(5, sin8((frame_idx / 5) as u8));
 
         target.write(pixbuf.iter().map(move |x| { x.scale8(brightness)})).unwrap();
@@ -86,6 +87,8 @@ fn main() {
             frame_count = 0;
             log::info!("FPS: {}", fps.measurement().rate());
         }
+
+        // Pet the watchdog
         unsafe {esp_idf_svc::hal::sys::esp_task_wdt_reset();}
     }
 }
