@@ -7,16 +7,6 @@ use rgb::Rgb;
 
 use crate::liber8tion::interpolate::scale8;
 
-pub trait IntoRgb8 {
-    fn into_rgb8(self) -> Rgb<u8>;
-}
-
-impl IntoRgb8 for Rgb<u8> {
-    fn into_rgb8(self) -> Rgb<u8> {
-        self
-    }
-}
-
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Hsv {
     pub hue: u8,
@@ -34,9 +24,9 @@ impl Hsv {
     }
 }
 
-impl IntoRgb8 for Hsv {
+impl Into<Rgb<u8>> for Hsv {
     //TODO: Borrowed from FastLED
-    fn into_rgb8(self) -> Rgb<u8> {
+    fn into(self) -> Rgb<u8> {
         const HSV_SECTION_3: u8 = 0x40;
 
         if self.saturation == 0 {
