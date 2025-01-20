@@ -11,6 +11,7 @@ pub trait Fract8Ops {
 }
 
 impl Fract8Ops for u8 {
+    #[inline]
     fn scale8(self, scale: Fract8) -> Self {
         match scale {
             0 => 0,
@@ -21,6 +22,7 @@ impl Fract8Ops for u8 {
         }
     }
 
+    #[inline]
     fn blend8(self, other: Self, scale: Fract8) -> Self {
         match scale {
             0 => self,
@@ -31,6 +33,7 @@ impl Fract8Ops for u8 {
 }
 
 impl Fract8Ops for Rgb<u8> {
+    #[inline]
     fn scale8(self, scale: Fract8) -> Self {
         Rgb::new(
             self.r.scale8(scale),
@@ -39,6 +42,7 @@ impl Fract8Ops for Rgb<u8> {
         )
     }
 
+    #[inline]
     fn blend8(self, other: Self, scale: Fract8) -> Self {
         match scale {
             0 => self,
@@ -55,10 +59,12 @@ impl Fract8Ops for Rgb<u8> {
     }
 }
 
+#[inline]
 pub fn scale8<T: Fract8Ops>(i: T, scale: Fract8) -> T {
     i.scale8(scale)
 }
 
+#[inline]
 pub fn avg7(i: i8, j: i8) -> i8 {
     i.unsigned_shr(1).wrapping_add(j.unsigned_shr(1)).wrapping_add(i & 0x1)
 }
