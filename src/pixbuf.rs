@@ -80,7 +80,7 @@ impl<U> Visible for BufferedSurface<U> {
             opacity: Some(opacity),
             slot: self.slot,
             ..Default::default()
-        });
+        }).unwrap();
     }
 
     fn set_visible(&mut self, visible: bool) {
@@ -88,7 +88,7 @@ impl<U> Visible for BufferedSurface<U> {
             visible: Some(visible),
             slot: self.slot,
             ..Default::default()
-        })
+        }).unwrap();
     }
 }
 
@@ -98,7 +98,7 @@ impl<U> Surface<U> for BufferedSurface<U> {
             shader: Some(None),
             slot: self.slot,
             ..Default::default()
-        });
+        }).unwrap();
     }
 
     fn set_rect(&mut self, rect: Rectangle<Virtual>) {
@@ -106,7 +106,7 @@ impl<U> Surface<U> for BufferedSurface<U> {
             rect: Some(rect),
             slot: self.slot,
             ..Default::default()
-        });
+        }).unwrap();
     }
 
     fn set_shader<T: Shader<U>>(&mut self, shader: T) {
@@ -114,7 +114,7 @@ impl<U> Surface<U> for BufferedSurface<U> {
             shader: Some(Some(Box::new(shader))),
             slot: self.slot,
             ..Default::default()
-        });
+        }).unwrap();
     }
 }
 
@@ -133,7 +133,7 @@ impl<U> Default for UpdateQueue<U> {
 }
 
 impl<U> UpdateQueue<U> {
-    fn push(&self, update: SurfaceUpdate<U>) {
+    fn push(&self, update: SurfaceUpdate<U>) -> Result<(), SurfaceUpdate<U>> {
         let mut locked = self.pending.lock().unwrap();
         let mut existing_slot = None;
         for existing in locked.iter_mut() {
@@ -147,10 +147,14 @@ impl<U> UpdateQueue<U> {
                 tgt.merge(update);
             }
             _ => {
-                locked.try_push(update).unwrap();
-                self.damaged.store(true, core::sync::atomic::Ordering::Relaxed);
+                match locked.try_push(update) {
+                    Ok(_) => self.damaged.store(true, core::sync::atomic::Ordering::Relaxed),
+                    Err(e) => return Err(e)
+                }
             }
         }
+
+        Ok(())
     }
 
     fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U>>> {
