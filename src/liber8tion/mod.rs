@@ -138,7 +138,7 @@ impl From<Rgb<u8>> for Hsv {
         // at least one channel is now zero
         // if all three channels are zero, we had a
         // shade of gray.
-        if (r + g + b) == 0 {
+        if (r.wrapping_add(g).wrapping_add(b)) == 0 {
             // we pick hue zero for no special reason
             return Hsv::new( 0, 0, 255 - s);
         }
@@ -217,7 +217,7 @@ impl From<Rgb<u8>> for Hsv {
             } else {
                 // R-G < G, we're in Orange-Yellow
                 h = HUE_ORANGE;
-                h += scale8( qsub8((g - 85) + (171 - r), 4), FIXFRAC8!(32,85)); //221
+                h += scale8( qsub8((g.wrapping_sub(85)).wrapping_add(171u8.wrapping_sub(r)), 4), FIXFRAC8!(32,85)); //221
             }
             
         } else if highest == g {
