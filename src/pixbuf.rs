@@ -126,7 +126,7 @@ struct UpdateQueue<U> {
 impl<U> Default for UpdateQueue<U> {
     fn default() -> Self {
         Self {
-            pending: AtomicMutex::new(HeapRb::new(8)),
+            pending: AtomicMutex::new(HeapRb::new(16)),
             damaged: AtomicBool::new(false)
         }
     }
