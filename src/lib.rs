@@ -6,7 +6,11 @@ pub mod geometry;
 pub mod mappings;
 pub mod render;
 pub mod liber8tion;
-mod atomics;
 pub mod prelude;
 
+#[cfg(feature="alloc")]
+pub mod surface;
+#[cfg(feature="alloc")]
 extern crate alloc;
+#[cfg(feature="alloc")]
+mod atomics;
