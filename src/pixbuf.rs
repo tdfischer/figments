@@ -10,7 +10,7 @@ use ringbuf::{traits::*, HeapRb};
 use crate::liber8tion::interpolate::Fract8Ops;
 
 use super::geometry::*;
-use super::render::{HardwarePixel, PixelView, Sample, Shader, Surface, Surfaces, Visible};
+use super::render::{HardwarePixel, Sample, Shader, Surface, Surfaces, Visible};
 use super::atomics::AtomicMutex;
 
 use alloc::boxed::Box;
@@ -211,7 +211,7 @@ impl<U: 'static> ShaderChain<U> {
         })
     }
 
-    fn render_to<S: Sample>(&self, output: &mut S, frame: &U) {
+    fn render_to<'a, S: Sample<'a>>(&self, output: &mut S, frame: &U) {
         for surface in &self.bindings {
             let opacity = surface.opacity;
             if opacity > 0 && surface.visible {
@@ -246,7 +246,7 @@ impl<U: 'static> Surfaces for BufferedSurfacePool<U> {
         self.pool.borrow_mut().new_surface(area)
     }
 
-    fn render_to<S: super::render::Sample<Pixel = Self::Pixel>>(&self, output: &mut S, frame: &U) {
+    fn render_to<'a, S: super::render::Sample<'a, Pixel = Self::Pixel>>(&self, output: &mut S, frame: &U) {
         let mut b = self.pool.borrow_mut();
         b.commit();
         b.render_to(output, frame);

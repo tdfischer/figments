@@ -3,10 +3,10 @@ use core::cmp::{max, min};
 use core::ops::IndexMut;
 
 use crate::liber8tion::interpolate::scale8;
+use crate::pixbuf::Pixbuf;
 use crate::render::{HardwarePixel, Sample};
 
 use super::geometry::*;
-use super::render::PixelView;
 
 /// Linear coordinate space where Y is meaningless
 pub struct LinearSpace {}
@@ -19,17 +19,19 @@ pub type LinearCoords = Coordinates<LinearSpace>;
 
 /// A naive mapping from 2d [Virtual] coordinates into a [LinearSpace]
 #[derive(Debug)]
-pub struct LinearSampleView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
-    max_x: u8,
-    idx: usize,
+pub struct LinearSampleView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
+    start_idx: usize,
+    end_idx: usize,
+    virt_step_size: u8,
+    offset: usize,
     pixbuf: &'a mut PB
 }
 
-pub struct LinearSampler<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
+pub struct LinearSampler<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
     pixbuf: &'a mut PB
 }
 
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> LinearSampler<'a, P, PB> {
+impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> LinearSampler<'a, P, PB> {
     pub fn new(pixbuf: &'a mut PB) -> Self {
         Self {
             pixbuf
@@ -37,33 +39,46 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> LinearSampler<'a, P,
     }
 }
 
-
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output=P>> Sample for LinearSampler<'a, P, PB> {
+impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output=P> + Pixbuf<Pixel=P>> Sample<'a> for LinearSampler<'a, P, PB> {
     
     type Pixel = P;
+    type PixelView = LinearSampleView<'a, P, PB>;
     
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl PixelView<Pixel = Self::Pixel> {
+    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView {
+        let pixcount = self.pixbuf.pixel_count() - 1;
+        let start_idx = scale8(pixcount as u8, rect.left()) as usize;
+        let end_idx = scale8(pixcount as u8, rect.right()) as usize;
+        let idx_span = end_idx - start_idx;
+        let virt_step_size = match idx_span {
+            0 => 0,
+            _ => 255 / idx_span as u8
+        };
         LinearSampleView {
-            max_x: rect.right(),
-            idx: 0,
-            pixbuf: self.pixbuf
+            start_idx,
+            end_idx,
+            virt_step_size,
+            offset: 0,
+            pixbuf: unsafe { &mut *(self.pixbuf as *mut PB) }
         }
     }
 }
 
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> PixelView for LinearSampleView<'a, P, PB> {
-    fn next(&mut self) -> Option<(VirtualCoordinates, &mut Self::Pixel)> {
-        if self.idx as u8 == self.max_x {
+impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Iterator for LinearSampleView<'a, P, PB> {
+    type Item = (VirtualCoordinates, &'a mut P);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset + self.start_idx == self.end_idx {
             None
         } else {
-            let virt = VirtualCoordinates::new(self.idx as u8, 0); // FIXME: scale8
-            let idx = self.idx;
-            self.idx += 1;
-            Some((virt, &mut self.pixbuf[idx]))
+            let cur_idx = self.start_idx + self.offset;
+            let virt = VirtualCoordinates::new((self.offset as u8) * self.virt_step_size, 0);
+            self.offset += 1;
+            let entry = unsafe {
+                &mut *(&mut self.pixbuf[cur_idx] as *mut P)
+            };
+            Some((virt, entry))
         }
     }
-    
-    type Pixel = P;
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
@@ -177,11 +192,12 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P,
     }
 }
 
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> Sample for StrideSampler<'a, P, PB> {
+impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Sample<'a> for StrideSampler<'a, P, PB> {
     type Pixel = P;
+    type PixelView = StrideView<'a, P, PB>;
 
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl PixelView<Pixel = Self::Pixel> {
-        StrideView::new(self.pixbuf, self.map, rect)
+    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView {
+        StrideView::new(unsafe { &mut *(self.pixbuf as *mut PB) }, self.map, rect)
     }
 }
 
@@ -195,7 +211,7 @@ pub struct StrideView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
 }
 
 impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
-    fn new(pixbuf: &'a mut PB, map: &'a StrideMapping, rect: &Rectangle<Virtual>) -> Self {
+    pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping, rect: &Rectangle<Virtual>) -> Self {
         // Zero-index shape of the pixel picking area
         let range: Rectangle<StrideSpace> = Rectangle::new(
             Coordinates::new(
@@ -231,10 +247,10 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB
     }
 }
 
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> PixelView for StrideView<'a, P, PB> {
-    type Pixel = P;
+impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, PB> {
+    type Item = (VirtualCoordinates, &'a mut P);
 
-    fn next(&mut self) -> Option<(VirtualCoordinates, &mut Self::Pixel)> {
+    fn next(&mut self) -> Option<Self::Item> {
         // Keep scanning until we reach the far right of the range
         while self.cur.x <= self.range.bottom_right.x {
             //debug_assert!((self.cur.x as usize) < self.map.strides.len(), "stride out of bounds {:?}", self);
@@ -266,7 +282,11 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> PixelView for S
 
             let idx = self.map.strides[physical_coords.x as usize].pixel_idx_for_offset(physical_coords.y);
 
-            return Some((virtual_coords, &mut self.pixbuf[idx]));
+            let entry = unsafe {
+                &mut *(&mut self.pixbuf[idx] as *mut P)
+            };
+
+            return Some((virtual_coords, entry));
         }
 
         None

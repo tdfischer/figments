@@ -11,22 +11,15 @@ use crate::liber8tion::interpolate::Fract8Ops;
 pub trait HardwarePixel: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 impl<T> HardwarePixel for T where T: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 
-/// Similiar to a [CoordinateView], but it maps [Virtual] coordinates to hardware pixels for writing
-pub trait PixelView {
-    /// The underlying hardware pixel type
-    type Pixel: HardwarePixel;
-
-    /// Returns the next pixel in this view, or None otherwise
-    fn next(&mut self) -> Option<(Coordinates<Virtual>, &mut Self::Pixel)>;
-}
-
 /// Types that can provide direct hardware access to individual pixels within a given [Virtual] rectangle shaped selection
-pub trait Sample {
+pub trait Sample<'a> {
     /// The underlying hardware pixel type
-    type Pixel: HardwarePixel;
+    type Pixel: HardwarePixel + 'a;
+    type PixelView: Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Pixel)>;
 
     /// Provides a [PixelView] over the given [Rectangle] selection
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl PixelView<Pixel = Self::Pixel>;
+    //fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl PixelView<Pixel = Self::Pixel>;
+    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView;
 }
 
 /// Types that can provide an RGB color given a location in [Virtual] space
@@ -48,7 +41,7 @@ pub trait Surfaces: Send {
     type Error: Debug;
     type Pixel: HardwarePixel;
     fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<Self::Surface, Self::Error>;
-    fn render_to<S: Sample<Pixel = Self::Pixel>>(&self, output: &mut S, uniforms: &Self::Uniforms);
+    fn render_to<'a, S: Sample<'a, Pixel = Self::Pixel>>(&self, output: &mut S, uniforms: &Self::Uniforms);
 }
 
 /// Helper trait for allowing some [Surface] properties to be set when they are in a slice or array 
