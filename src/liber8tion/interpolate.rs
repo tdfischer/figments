@@ -32,6 +32,18 @@ impl Fract8Ops for u8 {
     }
 }
 
+impl Fract8Ops for usize {
+    #[inline]
+    fn scale8(self, scale: Fract8) -> Self {
+        (self as u8).scale8(scale) as usize
+    }
+
+    #[inline]
+    fn blend8(self, other: Self, scale: Fract8) -> Self {
+        (self as u8).blend8(other as u8, scale) as usize
+    }
+}
+
 impl Fract8Ops for Rgb<u8> {
     #[inline]
     fn scale8(self, scale: Fract8) -> Self {
