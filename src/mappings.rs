@@ -22,7 +22,7 @@ pub type LinearCoords = Coordinates<LinearSpace>;
 pub struct LinearSampleView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
     start_idx: usize,
     end_idx: usize,
-    virt_step_size: u8,
+    virt_step_size: usize,
     offset: usize,
     pixbuf: &'a mut PB
 }
@@ -48,10 +48,10 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output=P> + Pixbuf<Pixel=P>>
         let pixcount = self.pixbuf.pixel_count() - 1;
         let start_idx = scale8(pixcount as u8, rect.left()) as usize;
         let end_idx = scale8(pixcount as u8, rect.right()) as usize;
-        let idx_span = end_idx - start_idx;
-        let virt_step_size = match idx_span {
+        let length = end_idx - start_idx;
+        let virt_step_size = match length {
             0 => 0,
-            _ => 255 / idx_span as u8
+            _ => 255 / length
         };
         LinearSampleView {
             start_idx,
@@ -71,7 +71,11 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P
             None
         } else {
             let cur_idx = self.start_idx + self.offset;
-            let virt = VirtualCoordinates::new((self.offset as u8) * self.virt_step_size, 0);
+            //let virt_x = self.offset * self.virt_step_size;
+            let length = self.end_idx - self.start_idx;
+            let pct = cur_idx as f32 / length as f32;
+            let virt_x = 255f32 * pct;
+            let virt = VirtualCoordinates::new(virt_x as u8, 0);
             self.offset += 1;
             let entry = unsafe {
                 &mut *(&mut self.pixbuf[cur_idx] as *mut P)
@@ -83,19 +87,19 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
-    pub length: u8,
-    pub x: u8,
-    pub y: u8,
+    pub length: usize,
+    pub x: usize,
+    pub y: usize,
     pub reverse: bool,
     pub physical_idx: usize
 }
 
 impl Stride {
-    pub const fn pixel_idx_for_offset(&self, offset: u8) -> usize {
+    pub const fn pixel_idx_for_offset(&self, offset: usize) -> usize {
         if self.reverse {
-            self.physical_idx + (self.length + self.y - 1 - offset) as usize
+            self.physical_idx + self.length + self.y - 1 - offset
         } else {
-            self.physical_idx + offset as usize
+            self.physical_idx + offset
         }
     }
 }
@@ -110,7 +114,6 @@ pub struct StrideMapping<const STRIDE_NUM: usize = 24> {
 
     /// The physical size of the display this map is configured for
     pub size: Rectangle<StrideSpace>,
-    rotation: u8
 }
 
 impl<const STRIDE_NUM: usize> Default for StrideMapping<STRIDE_NUM> {
@@ -123,7 +126,7 @@ impl<const STRIDE_NUM: usize> Default for StrideMapping<STRIDE_NUM> {
 
 impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
     /// Creates a new stride mapping from a sequence of (x, y, pixel_num, reversed)
-    pub fn from_json(stride_json: &[(u8, u8, u8, bool)]) -> Self {
+    pub fn from_json(stride_json: &[(usize, usize, usize, bool)]) -> Self {
         let mut strides = [Stride::default(); STRIDE_NUM];
         let stride_count = stride_json.len();
         let mut physical_idx = 0;
@@ -141,7 +144,7 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
                 reverse,
                 physical_idx
             };
-            physical_idx += length as usize;
+            physical_idx += length;
             size = Some(match size.take() {
                 None => Rectangle::new(
                     Coordinates::new(x, y),
@@ -164,7 +167,6 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
             strides,
             pixel_count: physical_idx,
             size: size.unwrap(),
-            rotation: 2
         }
     }
 }
@@ -173,7 +175,7 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
 #[derive(Debug, Clone, Copy)]
 pub struct StrideSpace {}
 impl CoordinateSpace for StrideSpace {
-    type Data = u8;
+    type Data = usize;
 }
 /// Coordinates within the stride space
 pub type StrideCoords = Coordinates<StrideSpace>;
@@ -232,8 +234,8 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB
             (map.size.width(), map.size.height())
         );
         let step_size = VirtualCoordinates::new(
-            u8::MAX / core::cmp::max(1, range.width()),
-            u8::MAX / core::cmp::max(1, range.height())
+            u8::MAX / core::cmp::max(1, range.width()) as u8,
+            u8::MAX / core::cmp::max(1, range.height()) as u8
         );
         debug_assert_ne!(step_size.x, 0);
         debug_assert_ne!(step_size.y, 0);
@@ -252,9 +254,9 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Iterator for St
 
     fn next(&mut self) -> Option<Self::Item> {
         // Keep scanning until we reach the far right of the range
-        while self.cur.x <= self.range.bottom_right.x {
+        while self.range.width() > 0 && self.range.height() > 0 && self.cur.x <= self.range.bottom_right.x {
             //debug_assert!((self.cur.x as usize) < self.map.strides.len(), "stride out of bounds {:?}", self);
-            let cur_stride: &Stride = &self.map.strides[self.cur.x as usize];
+            let cur_stride: &Stride = &self.map.strides[self.cur.x];
 
             // Skip ahead to the top of the current stride if we are starting from higher above.
             if self.cur.y < cur_stride.y {
@@ -275,12 +277,20 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Iterator for St
             let physical_coords = self.cur;
             self.cur.y += 1;
 
-            let virtual_coords = VirtualCoordinates::new(
+            /*let virtual_coords = VirtualCoordinates::new(
                 physical_coords.x.saturating_mul(self.step_size.x),
                 physical_coords.y.saturating_mul(self.step_size.y)
+            );*/
+
+            let x_pct = (physical_coords.x - self.range.left()) as f32 / self.range.width() as f32;
+            let y_pct = (physical_coords.y - self.range.top()) as f32 / self.range.height() as f32;
+
+            let virtual_coords = VirtualCoordinates::new(
+                (255f32 * x_pct) as u8,
+                (255f32 * y_pct) as u8
             );
 
-            let idx = self.map.strides[physical_coords.x as usize].pixel_idx_for_offset(physical_coords.y);
+            let idx = self.map.strides[physical_coords.x].pixel_idx_for_offset(physical_coords.y);
 
             let entry = unsafe {
                 &mut *(&mut self.pixbuf[idx] as *mut P)
