@@ -10,4 +10,6 @@ pub use crate::{
     surface::*
 };
 
+pub use crate::liber8tion::interpolate::Fract8Ops;
+
 pub use rgb::Rgb;
