@@ -8,6 +8,7 @@ pub type Fract8 = u8;
 pub trait Fract8Ops {
     fn scale8(self, scale: Fract8) -> Self;
     fn blend8(self, other: Self, scale: Fract8) -> Self;
+    fn saturating_add(self, other: Self) -> Self;
 }
 
 impl Fract8Ops for u8 {
@@ -30,6 +31,11 @@ impl Fract8Ops for u8 {
             _ => (((self as u16).unsigned_shl(8).bitor(other as u16)).wrapping_add(other as u16 * scale as u16).wrapping_sub(self as u16 * scale as u16)).unsigned_shr(8) as u8
         }
     }
+
+    #[inline]
+    fn saturating_add(self, other: Self) -> Self {
+        self.saturating_add(other)
+    }
 }
 
 impl Fract8Ops for usize {
@@ -41,6 +47,11 @@ impl Fract8Ops for usize {
     #[inline]
     fn blend8(self, other: Self, scale: Fract8) -> Self {
         (self as u8).blend8(other as u8, scale) as usize
+    }
+
+    #[inline]
+    fn saturating_add(self, other: Self) -> Self {
+        (self as usize).saturating_add(other)
     }
 }
 
@@ -68,6 +79,15 @@ impl Fract8Ops for Rgb<u8> {
                 )
             }
         }
+    }
+
+    #[inline]
+    fn saturating_add(self, other: Self) -> Self {
+        Rgb::new(
+            self.r.saturating_add(other.r),
+            self.g.saturating_add(other.g),
+            self.b.saturating_add(other.b)
+        )
     }
 }
 
