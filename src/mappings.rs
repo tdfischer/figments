@@ -1,10 +1,11 @@
 //! Mapppings between coordinate spaces
 use core::cmp::{max, min};
+use core::fmt::Debug;
 use core::ops::IndexMut;
 
 use crate::liber8tion::interpolate::scale8;
 use crate::pixbuf::Pixbuf;
-use crate::render::{HardwarePixel, Sample};
+use crate::render::HardwarePixel;
 
 use super::geometry::*;
 
@@ -18,48 +19,41 @@ impl CoordinateSpace for LinearSpace {
 pub type LinearCoords = Coordinates<LinearSpace>;
 
 /// A naive mapping from 2d [Virtual] coordinates into a [LinearSpace]
-#[derive(Debug)]
 pub struct LinearSampleView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
     start_idx: usize,
     end_idx: usize,
-    virt_step_size: usize,
+    virt_step_size: f32,
     offset: usize,
+    length: usize,
     pixbuf: &'a mut PB
 }
 
-pub struct LinearSampler<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
-    pixbuf: &'a mut PB
-}
+impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> LinearSampleView<'a, P, PB> {
 
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> LinearSampler<'a, P, PB> {
-    pub fn new(pixbuf: &'a mut PB) -> Self {
-        Self {
-            pixbuf
-        }
-    }
-}
-
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output=P> + Pixbuf<Pixel=P>> Sample<'a> for LinearSampler<'a, P, PB> {
-    
-    type Pixel = P;
-    type PixelView = LinearSampleView<'a, P, PB>;
-    
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView {
-        let pixcount = self.pixbuf.pixel_count() - 1;
+    /// Creates a new sampler which treats a pixbuf as a single 2-dimention line of pixels
+    pub fn new(pixbuf: &'a mut PB, rect: &Rectangle<Virtual>) -> Self {
+        let pixcount = pixbuf.pixel_count() - 1;
         let start_idx = scale8(pixcount as u8, rect.left()) as usize;
         let end_idx = scale8(pixcount as u8, rect.right()) as usize;
         let length = end_idx - start_idx;
         let virt_step_size = match length {
-            0 => 0,
-            _ => 255 / length
+            0 => 0f32,
+            _ => 1f32 / length as f32
         };
         LinearSampleView {
             start_idx,
             end_idx,
             virt_step_size,
+            length,
             offset: 0,
-            pixbuf: unsafe { &mut *(self.pixbuf as *mut PB) }
+            pixbuf
         }
+    }
+}
+
+impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Debug for LinearSampleView<'a, P, PB> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("LinearSampleView").field("start_idx", &self.start_idx).field("end_idx", &self.end_idx).field("virt_step_size", &self.virt_step_size).field("offset", &self.offset).finish()
     }
 }
 
@@ -72,8 +66,8 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P
         } else {
             let cur_idx = self.start_idx + self.offset;
             //let virt_x = self.offset * self.virt_step_size;
-            let length = self.end_idx - self.start_idx;
-            let pct = cur_idx as f32 / length as f32;
+            let pct = cur_idx as f32 / self.length as f32;
+            //let pct = self.virt_step_size;
             let virt_x = 255f32 * pct;
             let virt = VirtualCoordinates::new(virt_x as u8, 0);
             self.offset += 1;
@@ -180,39 +174,18 @@ impl CoordinateSpace for StrideSpace {
 /// Coordinates within the stride space
 pub type StrideCoords = Coordinates<StrideSpace>;
 
-pub struct StrideSampler<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
-    pixbuf: &'a mut PB,
-    map: &'a StrideMapping
-}
-
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P, PB> {
-    pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping) -> Self {
-        Self {
-            pixbuf,
-            map
-        }
-    }
-}
-
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Sample<'a> for StrideSampler<'a, P, PB> {
-    type Pixel = P;
-    type PixelView = StrideView<'a, P, PB>;
-
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView {
-        StrideView::new(unsafe { &mut *(self.pixbuf as *mut PB) }, self.map, rect)
-    }
-}
-
 /// A [CoordinateView] that maps [Virtual] coordinates to stride based coordinates
+#[derive(Debug)]
 pub struct StrideView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
     map: &'a StrideMapping,
     range: Rectangle<StrideSpace>,
     cur: StrideCoords,
-    step_size: VirtualCoordinates,
     pixbuf: &'a mut PB,
 }
 
 impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
+
+    /// Creates a new sampler that uses a [StrideMapping] to map 2d virtual coordinates to a 1d linear strip of pixels
     pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping, rect: &Rectangle<Virtual>) -> Self {
         // Zero-index shape of the pixel picking area
         let range: Rectangle<StrideSpace> = Rectangle::new(
@@ -225,6 +198,7 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB
                 scale8(map.size.height(), rect.bottom_right.y) + map.size.top()
             )
         );
+        //log::info!("range={:?}", range);
         debug_assert!(
             range.bottom_right.x <= map.size.width() &&
             range.bottom_right.y <= map.size.height(),
@@ -233,16 +207,9 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB
             rect,
             (map.size.width(), map.size.height())
         );
-        let step_size = VirtualCoordinates::new(
-            u8::MAX / core::cmp::max(1, range.width()) as u8,
-            u8::MAX / core::cmp::max(1, range.height()) as u8
-        );
-        debug_assert_ne!(step_size.x, 0);
-        debug_assert_ne!(step_size.y, 0);
         Self {
             map,
             range,
-            step_size,
             cur: range.top_left,
             pixbuf
         }
@@ -254,7 +221,7 @@ impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Iterator for St
 
     fn next(&mut self) -> Option<Self::Item> {
         // Keep scanning until we reach the far right of the range
-        while self.range.width() > 0 && self.range.height() > 0 && self.cur.x <= self.range.bottom_right.x {
+        while self.range.height() > 0 && self.cur.x <= self.range.bottom_right.x {
             //debug_assert!((self.cur.x as usize) < self.map.strides.len(), "stride out of bounds {:?}", self);
             let cur_stride: &Stride = &self.map.strides[self.cur.x];
 

@@ -1,29 +1,30 @@
 //! The core rendering engine types
 use rgb::Rgb;
 
+use core::fmt::Debug;
 use super::geometry::*;
 
 use crate::liber8tion::interpolate::Fract8Ops;
 
-/// Types that represent hardware pixel formats (eg, RGB888, BGR888, etc)
+pub trait Renderable<U> {
+    /// Draws the surfaces to the given sampler
+    fn render_to<'a, S: Sample<'a>>(&self, output: &mut S, uniforms: &U);
+}
+
+/// Types that represent hardware-backed pixel formats (eg, RGB888, BGR888, etc)
 pub trait HardwarePixel: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 impl<T> HardwarePixel for T where T: Send + Sync + Copy + Default + From<Rgb<u8>> + Fract8Ops {}
 
-/// Types that can provide direct hardware access to individual pixels within a given [Virtual] rectangle shaped selection
+/// Types that can provide direct hardware access to individual pixels within a given [Virtual] rectangle shaped selection for reading and writing
 pub trait Sample<'a> {
-    /// The underlying hardware pixel type
+    /// The type of pixel this sampler supports
     type Pixel: HardwarePixel + 'a;
-    type PixelView: Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Pixel)>;
+
+    /// The iterator retuned by this sampler
+    type PixelIterator: Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Pixel)> + Debug;
 
     /// Provides a [PixelView] over the given [Rectangle] selection
-    //fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl PixelView<Pixel = Self::Pixel>;
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelView;
-}
-
-pub trait Renderable {
-    type Uniforms;
-    type Pixel: HardwarePixel;
-    fn render_to<'a, S: Sample<'a, Pixel = Self::Pixel>>(&self, output: &mut S, uniforms: &Self::Uniforms);
+    fn sample(&mut self, rect: &Rectangle<Virtual>) -> Self::PixelIterator;
 }
 
 /// Function type that can provide an RGB color given a location in [Virtual] space and global rendering state

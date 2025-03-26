@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 
 use core::{marker::PhantomData, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
-use rgb::Rgb;
 use core::fmt::{Debug, Formatter};
 use ringbuf::{traits::*, HeapRb};
 
@@ -215,8 +214,7 @@ impl<U: 'static> ShaderChain<U> {
             if opacity > 0 && surface.visible {
                 if let Some(ref shader) = surface.shader {
                     let rect = surface.rect;
-                    let mut sample = output.sample(&rect);
-                    while let Some((virt_coords, pixel)) = sample.next() {
+                    for (virt_coords, pixel) in output.sample(&rect) {
                         let shader_pixel = shader.draw(&virt_coords, frame);
                         if shader_pixel.r > 0 || shader_pixel.g > 0 || shader_pixel.b > 0 {
                             *pixel = pixel.blend8(shader_pixel.into(), opacity);
@@ -235,6 +233,7 @@ pub struct BufferedSurfacePool<U> {
 }
 
 impl<U: 'static> Surfaces for BufferedSurfacePool<U> {
+    type Uniforms = U;
     type Error = ();
     type Surface = BufferedSurface<U>;
 
@@ -243,22 +242,26 @@ impl<U: 'static> Surfaces for BufferedSurfacePool<U> {
     }
 }
 
-impl<U: 'static> Renderable for BufferedSurfacePool<U> {
-    type Uniforms = U;
-    type Pixel = Rgb<u8>;
-
-    fn render_to<'a, S: super::render::Sample<'a, Pixel = Self::Pixel>>(&self, output: &mut S, frame: &U) {
+impl<U: 'static> Renderable<U> for BufferedSurfacePool<U> {
+    fn render_to<'a, S: Sample<'a>>(&self, output: &mut S, frame: &U) {
         let mut b = self.pool.borrow_mut();
         b.commit();
         b.render_to(output, frame);
     }
 }
 
-
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces: Send + Renderable {
+pub trait Surfaces: Send + Renderable<Self::Uniforms> {
+    /// The type of uniforms supported during rendering
+    type Uniforms;
+
+    /// The underlying surface type created by this backend
     type Surface: Surface<Self::Uniforms>;
+
+    /// Error type for operations
     type Error: Debug;
+
+    /// Creates a new surface if possible over the given area
     fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<Self::Surface, Self::Error>;
 }
 
