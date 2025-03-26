@@ -2,6 +2,7 @@
 pub mod interpolate;
 pub mod noise;
 pub mod trig;
+pub mod rhythm;
 
 use rgb::Rgb;
 
@@ -92,7 +93,7 @@ const HUE_PURPLE: u8 = 192;  ///< Purple (270°)
 const HUE_PINK: u8 = 224;     ///< Pink (315°)
 
 impl From<Rgb<u8>> for Hsv {
-    fn from(rgb: Rgb<u8>) -> Self {
+    fn from(rgb: Rgb<u8>) -> Self { //FIXME: it is broken :(
         let mut r = rgb.r;
         let mut g = rgb.g;
         let mut b = rgb.b;
