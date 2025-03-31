@@ -27,12 +27,12 @@ fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
     let x = x_src.wrapping_shr(8) as u8;
     let y = y_src.wrapping_shr(8) as u8;
 
-    let a  = get_cube(x) + y;
+    let a  = get_cube(x).wrapping_add(y);
     let aa = get_cube(a);
-    let ab = get_cube(a+1);
-    let b = get_cube(x+1) + y;
+    let ab = get_cube(a.wrapping_add(1));
+    let b = get_cube(x.wrapping_add(1)).wrapping_add(y);
     let ba = get_cube(b);
-    let bb = get_cube(b+1);
+    let bb = get_cube(b.wrapping_add(1));
 
     let mut u = x_src as u8;
     let mut v = y_src as u8;
