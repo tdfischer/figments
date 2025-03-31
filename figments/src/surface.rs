@@ -13,22 +13,22 @@ use ringbuf::{traits::*, HeapRb};
 use crate::liber8tion::interpolate::Fract8Ops;
 use core::cell::RefCell;
 
-struct ShaderBinding<U> {
-    shader: Option<Box<dyn Shader<U>>>,
-    rect: Rectangle<Virtual>,
+struct ShaderBinding<U, Space: CoordinateSpace> {
+    shader: Option<Box<dyn Shader<U, Space>>>,
+    rect: Rectangle<Space>,
     opacity: u8,
     visible: bool
 }
 
-struct SurfaceUpdate<U> {
-    shader: Option<Option<Box<dyn Shader<U>>>>,
-    rect: Option<Rectangle<Virtual>>,
+struct SurfaceUpdate<U, Space: CoordinateSpace> {
+    shader: Option<Option<Box<dyn Shader<U, Space>>>>,
+    rect: Option<Rectangle<Space>>,
     opacity: Option<u8>,
     visible: Option<bool>,
     slot: usize,
 }
 
-impl<U> Debug for SurfaceUpdate<U> {
+impl<U, Space: CoordinateSpace> Debug for SurfaceUpdate<U, Space> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("SurfaceUpdate")
             .field("slot", &self.slot)
@@ -36,7 +36,7 @@ impl<U> Debug for SurfaceUpdate<U> {
     }
 }
 
-impl<U> SurfaceUpdate<U> {
+impl<U, Space: CoordinateSpace> SurfaceUpdate<U, Space> {
     fn merge(&mut self, mut other: Self) {
         if other.shader.is_some() {
             self.shader = other.shader.take()
@@ -53,7 +53,7 @@ impl<U> SurfaceUpdate<U> {
     }
 }
 
-impl<U> Default for SurfaceUpdate<U> {
+impl<U, Space: CoordinateSpace> Default for SurfaceUpdate<U, Space> {
     fn default() -> Self {
         SurfaceUpdate {
             shader: None,
@@ -66,12 +66,12 @@ impl<U> Default for SurfaceUpdate<U> {
 }
 
 /// A thread-safe [Surface] implementation where changes are buffered before they are committed in batches
-pub struct BufferedSurface<U> {
-    updater: Arc<UpdateQueue<U>>,
+pub struct BufferedSurface<U, Space: CoordinateSpace> {
+    updater: Arc<UpdateQueue<U, Space>>,
     slot: usize
 }
 
-impl<U> Visible for BufferedSurface<U> {
+impl<U, Space: CoordinateSpace> Visible for BufferedSurface<U, Space> {
     fn set_opacity(&mut self, opacity: u8) {
         self.updater.push(SurfaceUpdate {
             opacity: Some(opacity),
@@ -89,7 +89,10 @@ impl<U> Visible for BufferedSurface<U> {
     }
 }
 
-impl<U> Surface<U> for BufferedSurface<U> {
+impl<U, Space: CoordinateSpace> Surface for BufferedSurface<U, Space> {
+    type Uniforms = U;
+    type CoordinateSpace = Space;
+
     fn clear_shader(&mut self) {
         self.updater.push(SurfaceUpdate {
             shader: Some(None),
@@ -98,7 +101,7 @@ impl<U> Surface<U> for BufferedSurface<U> {
         }).unwrap();
     }
 
-    fn set_rect(&mut self, rect: Rectangle<Virtual>) {
+    fn set_rect(&mut self, rect: Rectangle<Space>) {
         self.updater.push(SurfaceUpdate {
             rect: Some(rect),
             slot: self.slot,
@@ -106,7 +109,7 @@ impl<U> Surface<U> for BufferedSurface<U> {
         }).unwrap();
     }
 
-    fn set_shader<T: Shader<U>>(&mut self, shader: T) {
+    fn set_shader<T: Shader<U, Space>>(&mut self, shader: T) {
         self.updater.push(SurfaceUpdate {
             shader: Some(Some(Box::new(shader))),
             slot: self.slot,
@@ -115,12 +118,12 @@ impl<U> Surface<U> for BufferedSurface<U> {
     }
 }
 
-struct UpdateQueue<U> {
-    pending: AtomicMutex<HeapRb<SurfaceUpdate<U>>>,
+struct UpdateQueue<U, Space: CoordinateSpace> {
+    pending: AtomicMutex<HeapRb<SurfaceUpdate<U, Space>>>,
     damaged: AtomicBool
 }
 
-impl<U> Default for UpdateQueue<U> {
+impl<U, Space: CoordinateSpace> Default for UpdateQueue<U, Space> {
     fn default() -> Self {
         Self {
             pending: AtomicMutex::new(HeapRb::new(16)),
@@ -129,8 +132,8 @@ impl<U> Default for UpdateQueue<U> {
     }
 }
 
-impl<U> UpdateQueue<U> {
-    fn push(&self, update: SurfaceUpdate<U>) -> Result<(), SurfaceUpdate<U>> {
+impl<U, Space: CoordinateSpace> UpdateQueue<U, Space> {
+    fn push(&self, update: SurfaceUpdate<U, Space>) -> Result<(), SurfaceUpdate<U, Space>> {
         let mut locked = self.pending.lock().unwrap();
         let mut existing_slot = None;
         for existing in locked.iter_mut() {
@@ -154,7 +157,7 @@ impl<U> UpdateQueue<U> {
         Ok(())
     }
 
-    fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U>>> {
+    fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U, Space>>> {
         if self.damaged.load(core::sync::atomic::Ordering::Relaxed) {
             let mut updates = self.pending.lock().unwrap();
             let next = HeapRb::new(8);
@@ -167,12 +170,12 @@ impl<U> UpdateQueue<U> {
 }
 
 #[derive(Default)]
-struct ShaderChain<U> {
-    bindings: Vec<ShaderBinding<U>>,
-    updates: Arc<UpdateQueue<U>>
+struct ShaderChain<U, Space: CoordinateSpace> {
+    bindings: Vec<ShaderBinding<U, Space>>,
+    updates: Arc<UpdateQueue<U, Space>>
 }
 
-impl<U: 'static> ShaderChain<U> {
+impl<U: 'static, Space: CoordinateSpace> ShaderChain<U, Space> {
     pub fn commit(&mut self) {
         if let Some(mut queue) = self.updates.try_take() {
             for update in queue.iter_mut() {
@@ -193,7 +196,7 @@ impl<U: 'static> ShaderChain<U> {
         }
     }
 
-    fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<BufferedSurface<U>, ()> {
+    fn new_surface(&mut self, area: Rectangle<Space>) -> Result<BufferedSurface<U, Space>, ()> {
         let next_slot = self.bindings.len();
         self.bindings.push(ShaderBinding {
             opacity: 255,
@@ -208,13 +211,13 @@ impl<U: 'static> ShaderChain<U> {
         })
     }
 
-    fn render_to<'a, S: Sample<'a>>(&self, output: &mut S, frame: &U) {
+    fn render_to<'a, S: Sample<'a, Space=Space>>(&self, output: &mut S, frame: &U) {
         for surface in &self.bindings {
             let opacity = surface.opacity;
             if opacity > 0 && surface.visible {
                 if let Some(ref shader) = surface.shader {
-                    let rect = surface.rect;
-                    for (virt_coords, pixel) in output.sample(&rect) {
+                    let rect = &surface.rect;
+                    for (virt_coords, pixel) in output.sample(rect) {
                         let shader_pixel = shader.draw(&virt_coords, frame);
                         if shader_pixel.r > 0 || shader_pixel.g > 0 || shader_pixel.b > 0 {
                             *pixel = pixel.blend8(shader_pixel.into(), opacity);
@@ -228,22 +231,21 @@ impl<U: 'static> ShaderChain<U> {
 
 /// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
 #[derive(Default)]
-pub struct BufferedSurfacePool<U> {
-    pool: RefCell<ShaderChain<U>>
+pub struct BufferedSurfacePool<U, Space: CoordinateSpace> {
+    pool: RefCell<ShaderChain<U, Space>>
 }
 
-impl<U: 'static> Surfaces for BufferedSurfacePool<U> {
-    type Uniforms = U;
+impl<U: 'static, Space: CoordinateSpace> Surfaces for BufferedSurfacePool<U, Space> {
     type Error = ();
-    type Surface = BufferedSurface<U>;
-
-    fn new_surface(&mut self, area: super::geometry::Rectangle<super::geometry::Virtual>) -> Result<Self::Surface, Self::Error> {
+    type Surface = BufferedSurface<U, Space>;
+    
+    fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error> {
         self.pool.borrow_mut().new_surface(area)
     }
 }
 
-impl<U: 'static> Renderable<U> for BufferedSurfacePool<U> {
-    fn render_to<'a, S: Sample<'a>>(&self, output: &mut S, frame: &U) {
+impl<U: 'static, Space: CoordinateSpace> Renderable<U, Space> for BufferedSurfacePool<U, Space> {
+    fn render_to<'a, S: Sample<'a, Space=Space>>(&self, output: &mut S, frame: &U) {
         let mut b = self.pool.borrow_mut();
         b.commit();
         b.render_to(output, frame);
@@ -251,18 +253,19 @@ impl<U: 'static> Renderable<U> for BufferedSurfacePool<U> {
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces: Send + Renderable<Self::Uniforms> {
+pub trait Surfaces: Send + Renderable<<Self::Surface as Surface>::Uniforms, <Self::Surface as Surface>::CoordinateSpace> {
+    //type CoordinateSpace: CoordinateSpace;
     /// The type of uniforms supported during rendering
-    type Uniforms;
+    //type Uniforms;
 
     /// The underlying surface type created by this backend
-    type Surface: Surface<Self::Uniforms>;
+    type Surface: Surface;
 
     /// Error type for operations
     type Error: Debug;
 
     /// Creates a new surface if possible over the given area
-    fn new_surface(&mut self, area: Rectangle<Virtual>) -> Result<Self::Surface, Self::Error>;
+    fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error>;
 }
 
 /// Helper trait for allowing some [Surface] properties to be set when they are in a slice or array 
@@ -289,16 +292,16 @@ impl<T: Visible> Visible for [T] {
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> {
+pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace>, U> {
     surfaces: &'a mut SS,
-    rect: Option<Rectangle<Virtual>>,
+    rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
     shader: Option<SF>,
     visible: Option<bool>,
     _uniform: PhantomData<U>
 }
 
-impl<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> SurfaceBuilder<'a, S, SS, SF, U> {
+impl<'a, S: Surface<Uniforms = U>, SS: Surfaces<Surface = S>, SF: Shader<U, S::CoordinateSpace>, U> SurfaceBuilder<'a, SS, SF, U> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -318,7 +321,7 @@ impl<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> SurfaceBuil
     }
 
     /// Sets the initial size of the surface
-    pub fn rect(mut self, rect: Rectangle<Virtual>) -> Self {
+    pub fn rect(mut self, rect: Rectangle<<SS::Surface as Surface>::CoordinateSpace>) -> Self {
         self.rect = Some(rect);
         self
     }
@@ -336,7 +339,7 @@ impl<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> SurfaceBuil
     }
 
     /// Constructs the surface
-    pub fn finish(self) -> Result<S, SS::Error> {
+    pub fn finish(self) -> Result<SS::Surface, SS::Error> {
         let sfc = self.surfaces.new_surface(match self.rect {
             None => Rectangle::everything(),
             Some(r) => r
@@ -362,13 +365,15 @@ impl<'a, S: Surface<U>, SS: Surfaces<Surface = S>, SF: Shader<U>, U> SurfaceBuil
 }
 
 /// A rectangular set of pixels that can be drawn on with a [Shader]
-pub trait Surface<U>: Send + Visible {
+pub trait Surface: Send + Visible {
+    type Uniforms;
+    type CoordinateSpace: CoordinateSpace;
     /// Sets the shader for this surface
-    fn set_shader<T: Shader<U>>(&mut self, shader: T);
+    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace>>(&mut self, shader: T);
 
     /// Clears the shader
     fn clear_shader(&mut self);
 
     /// Changes the size of the surface
-    fn set_rect(&mut self, rect: Rectangle<Virtual>);
+    fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>);
 }

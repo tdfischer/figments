@@ -18,7 +18,7 @@ Self: Sub<Output=Self> + Add<Output=Self> {
 }
 
 /// Trait for describing coordinate spaces
-pub trait CoordinateSpace {
+pub trait CoordinateSpace: 'static {
     /// The underlying data type used for this coordinate space
     type Data: CoordinateOp;
 }
@@ -118,7 +118,7 @@ impl<S: CoordinateSpace> Coordinates<S> {
 }
 
 /// The standard virtual [CoordinateSpace], which ranges from (0, 0) to (255, 255).
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub struct Virtual {}
 impl CoordinateSpace for Virtual {
     type Data = u8;
