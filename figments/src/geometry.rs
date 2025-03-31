@@ -7,7 +7,7 @@ use num::{One, pow, integer::Roots};
 use core::cmp::{min, max};
 
 /// Basic trait for operations on 2d coordinate components
-pub trait CoordinateOp: PartialOrd + PartialEq + Sub + Clone + Mul + Copy + One + Add + Eq + Ord + Debug where
+pub trait CoordinateOp: PartialOrd + PartialEq + Sub + Clone + Mul + Copy + One + Add + Eq + Ord + Debug + Send + Sync + SaturatingAdd where
 Self: Sub<Output=Self> + Add<Output=Self> {
     /// The smallest possible value within a coordinate space
     const MIN: Self;
