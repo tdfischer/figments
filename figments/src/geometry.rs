@@ -145,6 +145,10 @@ impl<Space: CoordinateSpace> Rectangle<Space> {
         }
     }
 
+    pub const fn new_from_coordinates(left: Space::Data, top: Space::Data, right: Space::Data, bottom: Space::Data) -> Self {
+        Self::new(Coordinates::new(left, top), Coordinates::new(right, bottom))
+    }
+
     /// Returns a new rectangle that is rotated a number of 90 degree turns around the center of the [CoordinateSpace]
     pub fn rotated(&self, rotation: u8) -> Self {
         let a = self.top_left.rotated(rotation);
