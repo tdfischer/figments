@@ -3,6 +3,7 @@
 //! 
 use core::fmt::{Debug, Formatter};
 use core::ops::{Mul, Sub, Add};
+use num::traits::SaturatingAdd;
 use num::{One, pow, integer::Roots};
 use core::cmp::{min, max};
 
