@@ -6,9 +6,9 @@ use super::geometry::*;
 
 use crate::liber8tion::interpolate::Fract8Ops;
 
-pub trait Renderable<U, Space: CoordinateSpace> {
+pub trait Renderable<U, Space: CoordinateSpace, Pixel: HardwarePixel> {
     /// Draws the surfaces to the given sampler
-    fn render_to<'a, S: Sample<'a, Space = Space>>(&self, output: &mut S, uniforms: &U);
+    fn render_to<'a, S: Sample<'a, Space = Space, Pixel = Pixel>>(&self, output: &mut S, uniforms: &U);
 }
 
 /// Types that represent hardware-backed pixel formats (eg, RGB888, BGR888, etc)
@@ -30,12 +30,14 @@ pub trait Sample<'a> {
 
 /// Function type that can provide an RGB color given a location in [Virtual] space and global rendering state
 pub trait Shader<Uniforms, Space: CoordinateSpace>: Send + 'static {
+    type Pixel: HardwarePixel;
     /// Turns a [Virtual] coordinate into a real pixel color
-    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &Uniforms) -> Rgb<u8>;
+    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &Uniforms) -> Self::Pixel;
 }
 
-impl<T, U, Space: CoordinateSpace> Shader<U, Space> for T where T: 'static + Send + Fn(&Coordinates<Space>, &U) -> Rgb<u8> {
-    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Rgb<u8> {
+impl<T, U, Space: CoordinateSpace, Pixel: HardwarePixel> Shader<U, Space> for T where T: 'static + Send + Fn(&Coordinates<Space>, &U) -> Pixel {
+    type Pixel = Pixel;
+    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
         self(surface_coords, uniforms)
     }
 }
