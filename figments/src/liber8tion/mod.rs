@@ -97,9 +97,9 @@ impl From<Rgb<u8>> for Hsv {
         let mut r = rgb.r;
         let mut g = rgb.g;
         let mut b = rgb.b;
-        let mut h: u8 = 0;
-        let mut s: u8 = 0;
-        let mut v: u8 = 0;;
+        let mut h: u8;
+        let mut s: u8;
+        let mut v: u8;
         
         // find desaturation
         let mut desat = 255;
@@ -211,7 +211,7 @@ impl From<Rgb<u8>> for Hsv {
                 // if green is zero, we're in Purple/Pink-Red
                 h = (HUE_PURPLE.wrapping_add(HUE_PINK)) / 2;
                 h += scale8( qsub8(r, 128), FIXFRAC8!(48,128));
-            } else if ( (r - g) > g) {
+            } else if (r - g) > g {
                 // if R-G > G then we're in Red-Orange
                 h = HUE_RED;
                 h += scale8( g, FIXFRAC8!(32,85));
@@ -238,7 +238,7 @@ impl From<Rgb<u8>> for Hsv {
                 //             FIXFRAC8(32,255)); //
             } else {
                 // if Blue is nonzero we're in Green-Aqua
-                if( (g-b) > b) {
+                if (g-b) > b {
                     h = HUE_GREEN;
                     h += scale8( b, FIXFRAC8!(32,85));
                 } else {
@@ -250,11 +250,11 @@ impl From<Rgb<u8>> for Hsv {
         } else /* highest == b */ {
             // Blue is highest
             // Hue could be Aqua/Blue-Blue, Blue-Purple, Purple-Pink
-            if( r == 0) {
+            if r == 0 {
                 // if red is zero, we're in Aqua/Blue-Blue
                 h = HUE_AQUA + ((HUE_BLUE - HUE_AQUA) / 4);
                 h += scale8( qsub8(b, 128), FIXFRAC8!(24,128));
-            } else if ( (b-r) > r) {
+            } else if (b-r) > r {
                 // B-R > R, we're in Blue-Purple
                 h = HUE_BLUE;
                 h += scale8( r, FIXFRAC8!(32,85));
