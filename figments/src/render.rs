@@ -1,6 +1,4 @@
 //! The core rendering engine types
-use rgb::Rgb;
-
 use core::fmt::Debug;
 use super::geometry::*;
 
@@ -32,14 +30,12 @@ pub trait Sample<'a> {
 }
 
 /// Function type that can provide an RGB color given a location in [Virtual] space and global rendering state
-pub trait Shader<Uniforms, Space: CoordinateSpace>: Send + 'static {
-    type Pixel: PixelFormat;
+pub trait Shader<Uniforms, Space: CoordinateSpace, Pixel: PixelFormat>: Send + 'static {
     /// Turns a [Virtual] coordinate into a real pixel color
-    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &Uniforms) -> Self::Pixel;
+    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &Uniforms) -> Pixel;
 }
 
-impl<T, U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space> for T where T: 'static + Send + Fn(&Coordinates<Space>, &U) -> Pixel {
-    type Pixel = Pixel;
+impl<T, U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for T where T: 'static + Send + Fn(&Coordinates<Space>, &U) -> Pixel {
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
         self(surface_coords, uniforms)
     }

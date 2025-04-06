@@ -29,14 +29,14 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderBinding<U, S
 }
 
 struct ShaderBinding<U, Space: CoordinateSpace, Pixel: PixelFormat> {
-    shader: Option<Box<dyn Shader<U, Space, Pixel = Pixel>>>,
+    shader: Option<Box<dyn Shader<U, Space, Pixel>>>,
     rect: Rectangle<Space>,
     opacity: u8,
     visible: bool
 }
 
 struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
-    shader: Option<Option<Box<dyn Shader<U, Space, Pixel = Pixel>>>>,
+    shader: Option<Option<Box<dyn Shader<U, Space, Pixel>>>>,
     rect: Option<Rectangle<Space>>,
     opacity: Option<u8>,
     visible: Option<bool>,
@@ -125,7 +125,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<
         }).unwrap();
     }
 
-    fn set_shader<T: Shader<U, Space, Pixel = Pixel>>(&mut self, shader: T) {
+    fn set_shader<T: Shader<U, Space, Pixel>>(&mut self, shader: T) {
         self.updater.push(SurfaceUpdate {
             shader: Some(Some(Box::new(shader))),
             slot: self.slot,
@@ -233,7 +233,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
     }
 }
 
-trait PixelBlend<OverlayPixel: PixelFormat> {
+pub trait PixelBlend<OverlayPixel: PixelFormat> {
     fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
 }
 
@@ -320,7 +320,7 @@ impl<T: Visible> Visible for [T] {
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel = Pixel>, U, Pixel: PixelFormat> {
+pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel: PixelFormat> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
@@ -330,7 +330,7 @@ pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surfac
     _pix: PhantomData<Pixel>
 }
 
-impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, S::CoordinateSpace, Pixel = S::Pixel>, U, Pixel: PixelFormat> SurfaceBuilder<'a, SS, SF, U, Pixel> {
+impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel>, U, Pixel: PixelFormat> SurfaceBuilder<'a, SS, SF, U, Pixel> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -400,7 +400,7 @@ pub trait Surface: Send + Visible {
     type CoordinateSpace: CoordinateSpace;
     type Pixel: PixelFormat;
     /// Sets the shader for this surface
-    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Pixel = Self::Pixel>>(&mut self, shader: T);
+    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel>>(&mut self, shader: T);
 
     /// Clears the shader
     fn clear_shader(&mut self);
