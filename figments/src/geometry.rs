@@ -19,27 +19,18 @@ Self: Sub<Output=Self> + Add<Output=Self> {
 }
 
 /// Trait for describing coordinate spaces
-pub trait CoordinateSpace: 'static {
+pub trait CoordinateSpace: 'static + Debug {
     /// The underlying data type used for this coordinate space
     type Data: CoordinateOp;
 }
 
 /// The fundamental 2d coordinate type
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Debug)]
 pub struct Coordinates<S: CoordinateSpace> {
     /// X coordinate
     pub x: S::Data,
     /// Y coordinate
     pub y: S::Data,
-}
-
-impl<S: CoordinateSpace> Debug for Coordinates<S> where S::Data: Debug {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("@")
-            .field(&self.x)
-            .field(&self.y)
-            .finish()
-    }
 }
 
 impl CoordinateOp for u8 {

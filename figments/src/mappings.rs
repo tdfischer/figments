@@ -10,6 +10,7 @@ use crate::render::HardwarePixel;
 use super::geometry::*;
 
 /// Linear coordinate space where Y is meaningless
+#[derive(Debug)]
 pub struct LinearSpace {}
 impl CoordinateSpace for LinearSpace {
     type Data = usize;
