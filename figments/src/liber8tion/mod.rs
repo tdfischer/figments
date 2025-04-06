@@ -4,7 +4,7 @@ pub mod noise;
 pub mod trig;
 pub mod rhythm;
 
-use rgb::Rgb;
+use rgb::{Rgb, Rgba};
 
 use crate::liber8tion::interpolate::scale8;
 
@@ -91,6 +91,12 @@ const HUE_AQUA: u8 = 128;    ///< Aqua (180°)
 const HUE_BLUE: u8 = 160;    ///< Blue (225°)
 const HUE_PURPLE: u8 = 192;  ///< Purple (270°)
 const HUE_PINK: u8 = 224;     ///< Pink (315°)
+
+impl From<Rgba<u8>> for Hsv {
+    fn from(value: Rgba<u8>) -> Self {
+        From::from(Rgb::new(value.r, value.g, value.b))
+    }
+}
 
 impl From<Rgb<u8>> for Hsv {
     fn from(rgb: Rgb<u8>) -> Self { //FIXME: it is broken :(
@@ -267,6 +273,13 @@ impl From<Rgb<u8>> for Hsv {
         
         h += 1;
         return Hsv::new( h, s, v);
+    }
+}
+
+impl Into<Rgba<u8>> for Hsv {
+    fn into(self) -> Rgba<u8> {
+        let rgb: Rgb<u8> = Into::into(self);
+        Rgba::new(rgb.r, rgb.g, rgb.b, 255)
     }
 }
 
