@@ -2,7 +2,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct AtomicMutex<T> {
     inner: UnsafeCell<T>,
     status: AtomicUsize
