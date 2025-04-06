@@ -3,6 +3,7 @@ pub mod interpolate;
 pub mod noise;
 pub mod trig;
 pub mod rhythm;
+mod sin_table;
 
 use rgb::{Rgb, Rgba};
 
