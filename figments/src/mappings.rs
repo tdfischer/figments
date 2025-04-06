@@ -51,7 +51,7 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Li
     }
 }
 
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Debug for LinearSampleView<'a, P, PB> {
+impl<P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Debug for LinearSampleView<'_, P, PB> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("LinearSampleView").field("start_idx", &self.start_idx).field("end_idx", &self.end_idx).field("virt_step_size", &self.virt_step_size).field("offset", &self.offset).finish()
     }
