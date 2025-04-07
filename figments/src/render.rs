@@ -1,8 +1,28 @@
 //! The core rendering engine types
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
+use rgb::{Rgb, Rgba};
+
 use super::geometry::*;
 
-use crate::liber8tion::interpolate::Fract8Ops;
+use crate::liber8tion::interpolate::{Fract8, Fract8Ops};
+
+pub trait PixelBlend<OverlayPixel: PixelFormat> {
+    fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
+}
+
+
+impl PixelBlend<Rgb<u8>> for Rgb<u8> {
+    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
+        self.blend8(overlay, opacity)
+    }
+}
+
+impl PixelBlend<Rgba<u8>> for Rgb<u8> {
+    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
+        self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
+    }
+}
+
 
 pub trait Renderable<'a, U, Space: CoordinateSpace, Pixel: PixelFormat> {
     /// Draws the surfaces to the given sampler

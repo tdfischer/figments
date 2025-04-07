@@ -233,23 +233,6 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
     }
 }
 
-pub trait PixelBlend<OverlayPixel: PixelFormat> {
-    fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
-}
-
-
-impl PixelBlend<Rgb<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay, opacity)
-    }
-}
-
-impl PixelBlend<Rgba<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
-        self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
-    }
-}
-
 /// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
 #[derive(Default, Debug)]
 pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
