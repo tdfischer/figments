@@ -1,5 +1,5 @@
 use num::PrimInt;
-use core::ops::BitOr;
+use core::ops::{Add, BitOr, Sub};
 
 use rgb::Rgb;
 
@@ -9,6 +9,7 @@ pub trait Fract8Ops {
     fn scale8(self, scale: Fract8) -> Self;
     fn blend8(self, other: Self, scale: Fract8) -> Self;
     fn saturating_add(self, other: Self) -> Self;
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self;
 }
 
 impl Fract8Ops for u8 {
@@ -36,6 +37,18 @@ impl Fract8Ops for u8 {
     fn saturating_add(self, other: Self) -> Self {
         self.saturating_add(other)
     }
+    
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        if other > self {
+            let delta = other - self;
+            let scaled = scale8(delta, scale);
+            self + scaled
+        } else {
+            let delta = self - other;
+            let scaled = scale8(delta, scale);
+            self - scaled
+        }
+    }
 }
 
 impl Fract8Ops for usize {
@@ -52,6 +65,18 @@ impl Fract8Ops for usize {
     #[inline]
     fn saturating_add(self, other: Self) -> Self {
         (self as usize).saturating_add(other)
+    }
+    
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        if other > self {
+            let delta = other - self;
+            let scaled = scale8(delta, scale);
+            self + scaled
+        } else {
+            let delta = self - other;
+            let scaled = scale8(delta, scale);
+            self - scaled
+        }
     }
 }
 
@@ -87,6 +112,14 @@ impl Fract8Ops for Rgb<u8> {
             self.r.saturating_add(other.r),
             self.g.saturating_add(other.g),
             self.b.saturating_add(other.b)
+        )
+    }
+    
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        Rgb::new(
+            self.r.lerp8by8(other.r, scale),
+            self.g.lerp8by8(other.g, scale),
+            self.b.lerp8by8(other.b, scale)
         )
     }
 }
@@ -133,16 +166,8 @@ pub fn lerp7by8(a: i8, b: i8, frac: u8) -> i8 {
     }
 }
 
-pub fn lerp8by8(a: u8, b: u8, frac: u8) -> u8 {
-    if b > a {
-        let delta = b - a;
-        let scaled = scale8(delta, frac);
-        a + scaled
-    } else {
-        let delta = a - b;
-        let scaled = scale8(delta, frac);
-        a - scaled
-    }
+pub fn lerp8by8<T: Fract8Ops>(a: T, b: T, frac: u8) -> T {
+    a.lerp8by8(b, frac)
 }
 
 pub fn map8(x: u8, range_start: u8, range_end: u8) -> u8 {
