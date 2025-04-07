@@ -60,3 +60,21 @@ impl<T, U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> f
         self(surface_coords, uniforms)
     }
 }
+
+pub trait Painter<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+    fn fill(&mut self, shader: &impl Shader<U, Space, Pixel>, uniforms: &U);
+    fn draw(&mut self, shader: &impl Shader<U, Space, Pixel>, uniforms: &U, rect: &Rectangle<Space>);
+}
+
+//pub struct Painter {}
+impl<'a, U, Space: CoordinateSpace, Pixel: PixelFormat + 'static, T> Painter<U, Space, Pixel> for T where T: Sample<'a, Space = Space, Pixel = Pixel>, T::Pixel: PixelBlend<Pixel> {
+    fn fill(&mut self, shader: &impl Shader<U, Space, Pixel>, uniforms: &U) {
+        self.draw(shader, uniforms, &Rectangle::everything());
+    }
+
+    fn draw(&mut self, shader: &impl Shader<U, Space, Pixel>, uniforms: &U, rect: &Rectangle<Space>) {
+        for (coords, pixel) in self.sample(rect) {
+            *pixel = pixel.blend_pixel(shader.draw(&coords, uniforms), 255);
+        }
+    }
+}
