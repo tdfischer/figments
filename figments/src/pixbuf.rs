@@ -1,11 +1,12 @@
 #![doc = "Pixel buffer types"]
 use core::ops::IndexMut;
+use core::fmt::Debug;
 use super::render::HardwarePixel;
 
 /// Types that provide access to a buffer of pixels, which may or may not be hardware based
 /// 
 /// This trait requires [IndexMut] so you can acccess individual pixels by index
-pub trait Pixbuf: IndexMut<usize, Output=Self::Pixel> + Send {
+pub trait Pixbuf: IndexMut<usize, Output=Self::Pixel> + Send + Debug {
     /// The underlying hardware pixel type
     type Pixel: HardwarePixel;
     /// Creates a new Pixbuf that may or may not contain default pixel values (eg, black)

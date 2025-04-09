@@ -1,7 +1,7 @@
 //! 2D Geometry primitives such as coordinates, coordinate spaces, and rectangles
 //! 
 //! 
-use core::fmt::{Debug, Formatter};
+use core::fmt::Debug;
 use core::ops::{Mul, Sub, Add};
 use num::traits::SaturatingAdd;
 use num::{One, pow, integer::Roots};
@@ -137,6 +137,7 @@ impl<Space: CoordinateSpace> Rectangle<Space> {
         }
     }
 
+    /// A shortcut for Rectangle::new without having to use Coordinates::new(x, y)
     pub const fn new_from_coordinates(left: Space::Data, top: Space::Data, right: Space::Data, bottom: Space::Data) -> Self {
         Self::new(Coordinates::new(left, top), Coordinates::new(right, bottom))
     }

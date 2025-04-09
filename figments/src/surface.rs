@@ -1,11 +1,9 @@
-use crate::liber8tion::interpolate::Fract8;
 use crate::prelude::*;
 
 use super::atomics::AtomicMutex;
 
-use alloc::{boxed::Box, collections::binary_heap::Iter};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
-use rgb::Rgba;
 
 use core::{marker::PhantomData, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
@@ -139,6 +137,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for UpdateQueue<U, Spa
         f.debug_struct("UpdateQueue").finish()
     }
 }
+
 struct UpdateQueue<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     pending: AtomicMutex<HeapRb<SurfaceUpdate<U, Space, Pixel>>>,
     damaged: AtomicBool
@@ -379,9 +378,15 @@ impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF:
 
 /// A rectangular set of pixels that can be drawn on with a [Shader]
 pub trait Surface: Send + Visible {
+    /// The type of uniform data that is supported by this shader
     type Uniforms;
+
+    /// The coordiante space over which this shader can operate
     type CoordinateSpace: CoordinateSpace;
+
+    /// The format of the pixels produced by this shader
     type Pixel: PixelFormat;
+
     /// Sets the shader for this surface
     fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel>>(&mut self, shader: T);
 
