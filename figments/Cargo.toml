@@ -17,11 +17,12 @@ name = "figments"
 
 [features]
 default = []
-alloc = ["dep:ringbuf"]
+std = ["ringbuf/std", "alloc"]
+alloc = ["dep:ringbuf", "ringbuf/alloc"]
 
 [dependencies]
 rgb = "0.8"
 num = "0.4"
 
 # alloc
-ringbuf = { version = "0.4.7", optional = true }
+ringbuf = { version = "0.4.7", optional = true, default_features = false }
