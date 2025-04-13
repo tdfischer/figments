@@ -105,7 +105,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<
         }).unwrap();
     }
 
-    fn set_shader<T: Shader<U, Space, Pixel>>(&mut self, shader: T) {
+    fn set_shader<T: Shader<U, Space, Pixel> + 'static>(&mut self, shader: T) {
         self.updater.push(SurfaceUpdate {
             shader: Some(Some(Box::new(shader))),
             slot: self.slot,
@@ -236,17 +236,18 @@ pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     pool: RefCell<ShaderChain<U, Space, Pixel>>
 }
 
-impl<'a, U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> Surfaces for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
     type Error = ();
     type Surface = BufferedSurface<U, Space, Pixel>;
     
     fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error> {
         self.pool.borrow_mut().new_surface(area)
     }
-}
-
-impl<'a, U: 'static, Space: CoordinateSpace, ShaderPixel: Debug + PixelFormat + 'static, Blendable: HardwarePixel + 'static> Renderable<'a, U, Space, Blendable> for BufferedSurfacePool<U, Space, ShaderPixel> where Blendable: PixelBlend<ShaderPixel> {
-    fn render_to<S: Sample<'a, Space=Space, Pixel = Blendable>>(&self, output: &mut S, frame: &U) {
+    
+    fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
+        where 
+            S: Sample<'a, Space>,
+            S::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {
         let mut b = self.pool.borrow_mut();
         b.commit();
         for surface in &b.bindings {
@@ -254,8 +255,9 @@ impl<'a, U: 'static, Space: CoordinateSpace, ShaderPixel: Debug + PixelFormat + 
             if opacity > 0 && surface.visible {
                 if let Some(ref shader) = surface.shader {
                     let rect = &surface.rect;
+                    output.paint(shader, uniforms, rect);
                     for (virt_coords, output_pixel) in output.sample(rect) {
-                        let shader_pixel = shader.draw(&virt_coords, frame);
+                        let shader_pixel = shader.draw(&virt_coords, uniforms);
                         *output_pixel = output_pixel.blend_pixel(shader_pixel, opacity);
                     }
                 }
@@ -265,42 +267,24 @@ impl<'a, U: 'static, Space: CoordinateSpace, ShaderPixel: Debug + PixelFormat + 
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces: Send {
+pub trait Surfaces<Space: CoordinateSpace>: Send {
     /// The underlying surface type created by this backend
-    type Surface: Surface;
+    type Surface: Surface<CoordinateSpace = Space>;
 
     /// Error type for operations
     type Error: Debug;
 
     /// Creates a new surface if possible over the given area
-    fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error>;
-}
+    fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error>;
 
-/// Helper trait for allowing some [Surface] properties to be set when they are in a slice or array 
-pub trait Visible {
-    /// Sets the opacity of this surface, where 0 is completely transparent and 255 is completely opaque
-    fn set_opacity(&mut self, opacity: u8);
-
-    /// Sets the visibility of the surface without adjusting the stored opacity
-    fn set_visible(&mut self, visible: bool);
-}
-
-impl<T: Visible> Visible for [T] {
-    fn set_opacity(&mut self, opacity: u8) {
-        for v in self.iter_mut() {
-            v.set_opacity(opacity);
-        }
-    }
-
-    fn set_visible(&mut self, visible: bool) {
-        for v in self.iter_mut() {
-            v.set_visible(visible);
-        }
-    }
+    fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
+        where 
+            S: Sample<'a, Space>,
+            S::Output: PixelBlend<<Self::Surface as Surface>::Pixel>;
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel: PixelFormat> {
+pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel: PixelFormat> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
@@ -310,7 +294,7 @@ pub struct SurfaceBuilder<'a, SS: Surfaces, SF: Shader<U, <SS::Surface as Surfac
     _pix: PhantomData<Pixel>
 }
 
-impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel>, U, Pixel: PixelFormat> SurfaceBuilder<'a, SS, SF, U, Pixel> {
+impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel: PixelFormat> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -386,7 +370,7 @@ pub trait Surface: Send {
     type Pixel: PixelFormat;
 
     /// Sets the shader for this surface
-    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel>>(&mut self, shader: T);
+    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, shader: T);
 
     /// Clears the shader
     fn clear_shader(&mut self);
