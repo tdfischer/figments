@@ -4,41 +4,7 @@ use rgb::{Rgb, Rgba};
 
 use super::geometry::*;
 
-use crate::liber8tion::interpolate::{Fract8, Fract8Ops};
-
-/// Types that can blend the values of two pixels together (eg, overlaying RGBA8 on top of plain RGB8)
-pub trait PixelBlend<OverlayPixel: PixelFormat> {
-    /// Blend a given pixel as an overlay by a given percentage
-    fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
-}
-
-
-impl PixelBlend<Rgb<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay, opacity)
-    }
-}
-
-impl PixelBlend<Rgba<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
-        self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
-    }
-}
-
-
-/// Types that can draw something to a Sampler's pixels
-pub trait Renderable<'a, U, Space: CoordinateSpace, Pixel: PixelFormat> {
-    /// Draws the surfaces to the given sampler
-    fn render_to<S: Sample<'a, Space = Space, Pixel = Pixel>>(&self, output: &mut S, uniforms: &U);
-}
-
-/// Types that represent software or hardware based pixel formats
-pub trait PixelFormat: Send + Sync + Copy + Default {}
-impl<T> PixelFormat for T where T: Send + Sync + Copy + Default {}
-
-/// Types that represent hardware-backed pixel formats (eg, RGB888, BGR888, etc)
-pub trait HardwarePixel: PixelFormat + Fract8Ops + Debug {}
-impl<T> HardwarePixel for T where T: PixelFormat + Fract8Ops + Debug {}
+use crate::pixels::*;
 
 /// Types that can provide direct hardware access to individual pixels within a given [Virtual] rectangle shaped selection for reading and writing
 pub trait Sample<'a> {
