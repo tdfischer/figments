@@ -1,84 +1,9 @@
-//! Mapppings between coordinate spaces
 use core::cmp::{max, min};
-use core::fmt::Debug;
 use core::ops::IndexMut;
 
+use crate::geometry::*;
 use crate::liber8tion::interpolate::scale8;
-use crate::pixbuf::Pixbuf;
-use crate::render::HardwarePixel;
-
-use super::geometry::*;
-
-/// Linear coordinate space where Y is meaningless
-#[derive(Debug)]
-pub struct LinearSpace {}
-impl CoordinateSpace for LinearSpace {
-    type Data = usize;
-}
-
-/// Linear coordinate type
-pub type LinearCoords = Coordinates<LinearSpace>;
-
-/// A naive mapping from 2d [Virtual] coordinates into a [LinearSpace]
-pub struct LinearSampleView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> {
-    start_idx: usize,
-    end_idx: usize,
-    virt_step_size: f32,
-    offset: usize,
-    length: usize,
-    pixbuf: &'a mut PB
-}
-
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> LinearSampleView<'a, P, PB> {
-
-    /// Creates a new sampler which treats a pixbuf as a single 2-dimention line of pixels
-    pub fn new(pixbuf: &'a mut PB, rect: &Rectangle<Virtual>) -> Self {
-        let pixcount = pixbuf.pixel_count() - 1;
-        let start_idx = scale8(pixcount as u8, rect.left()) as usize;
-        let end_idx = scale8(pixcount as u8, rect.right()) as usize;
-        let length = end_idx - start_idx;
-        let virt_step_size = match length {
-            0 => 0f32,
-            _ => 1f32 / length as f32
-        };
-        LinearSampleView {
-            start_idx,
-            end_idx,
-            virt_step_size,
-            length,
-            offset: 0,
-            pixbuf
-        }
-    }
-}
-
-impl<P: HardwarePixel, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Debug for LinearSampleView<'_, P, PB> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("LinearSampleView").field("start_idx", &self.start_idx).field("end_idx", &self.end_idx).field("virt_step_size", &self.virt_step_size).field("offset", &self.offset).finish()
-    }
-}
-
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P> + Pixbuf<Pixel=P>> Iterator for LinearSampleView<'a, P, PB> {
-    type Item = (VirtualCoordinates, &'a mut P);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.offset + self.start_idx == self.end_idx {
-            None
-        } else {
-            let cur_idx = self.start_idx + self.offset;
-            //let virt_x = self.offset * self.virt_step_size;
-            let pct = cur_idx as f32 / self.length as f32;
-            //let pct = self.virt_step_size;
-            let virt_x = 255f32 * pct;
-            let virt = VirtualCoordinates::new(virt_x as u8, 0);
-            self.offset += 1;
-            let entry = unsafe {
-                &mut *(&mut self.pixbuf[cur_idx] as *mut P)
-            };
-            Some((virt, entry))
-        }
-    }
-}
+use crate::pixels::*;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
