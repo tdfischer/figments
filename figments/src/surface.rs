@@ -84,24 +84,6 @@ pub struct BufferedSurface<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     slot: usize
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Visible for BufferedSurface<U, Space, Pixel> {
-    fn set_opacity(&mut self, opacity: u8) {
-        self.updater.push(SurfaceUpdate {
-            opacity: Some(opacity),
-            slot: self.slot,
-            ..Default::default()
-        }).unwrap();
-    }
-
-    fn set_visible(&mut self, visible: bool) {
-        self.updater.push(SurfaceUpdate {
-            visible: Some(visible),
-            slot: self.slot,
-            ..Default::default()
-        }).unwrap();
-    }
-}
-
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<U, Space, Pixel> {
     type Uniforms = U;
     type CoordinateSpace = Space;
@@ -126,6 +108,22 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<
     fn set_shader<T: Shader<U, Space, Pixel>>(&mut self, shader: T) {
         self.updater.push(SurfaceUpdate {
             shader: Some(Some(Box::new(shader))),
+            slot: self.slot,
+            ..Default::default()
+        }).unwrap();
+    }
+
+    fn set_opacity(&mut self, opacity: u8) {
+        self.updater.push(SurfaceUpdate {
+            opacity: Some(opacity),
+            slot: self.slot,
+            ..Default::default()
+        }).unwrap();
+    }
+
+    fn set_visible(&mut self, visible: bool) {
+        self.updater.push(SurfaceUpdate {
+            visible: Some(visible),
             slot: self.slot,
             ..Default::default()
         }).unwrap();
@@ -377,7 +375,7 @@ impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF:
 }
 
 /// A rectangular set of pixels that can be drawn on with a [Shader]
-pub trait Surface: Send + Visible {
+pub trait Surface: Send {
     /// The type of uniform data that is supported by this shader
     type Uniforms;
 
@@ -395,4 +393,45 @@ pub trait Surface: Send + Visible {
 
     /// Changes the size of the surface
     fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>);
+
+    /// Sets the opacity of this surface, where 0 is completely transparent and 255 is completely opaque
+    fn set_opacity(&mut self, opacity: u8);
+
+    /// Sets the visibility of the surface without adjusting the stored opacity
+    fn set_visible(&mut self, visible: bool);
+}
+
+impl<T: Surface> Surface for [T] {
+    type Uniforms = T::Uniforms;
+
+    type CoordinateSpace = T::CoordinateSpace;
+
+    type Pixel = T::Pixel;
+
+    fn set_shader<S: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, shader: S) {
+        unimplemented!();
+    }
+
+    fn clear_shader(&mut self) {
+        self.iter_mut().for_each(|f| { f.clear_shader(); });
+    }
+
+    fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>) {
+        self.iter_mut().for_each(|f| { f.set_rect(rect); });
+    }
+
+    fn set_opacity(&mut self, opacity: u8) {
+        self.iter_mut().for_each(|f| { f.set_opacity(opacity); });
+    }
+
+    fn set_visible(&mut self, visible: bool) {
+        self.iter_mut().for_each(|f| { f.set_visible(visible); });
+    }
+}
+
+
+impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for Box<dyn Shader<U, Space, Pixel>> {
+    fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
+        self.as_ref().draw(surface_coords, uniforms)
+    }
 }
