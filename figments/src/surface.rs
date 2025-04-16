@@ -30,7 +30,8 @@ struct ShaderBinding<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     shader: Option<Box<dyn Shader<U, Space, Pixel>>>,
     rect: Rectangle<Space>,
     opacity: u8,
-    visible: bool
+    visible: bool,
+    offset: Coordinates<Space>
 }
 
 struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
@@ -38,6 +39,7 @@ struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     rect: Option<Rectangle<Space>>,
     opacity: Option<u8>,
     visible: Option<bool>,
+    offset: Option<Coordinates<Space>>,
     slot: usize,
 }
 
@@ -63,6 +65,9 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> SurfaceUpdate<U, Space, Pixe
         if other.visible.is_some() {
             self.visible = other.visible.take()
         }
+        if other.offset.is_some() {
+            self.offset = other.offset.take()
+        }
     }
 }
 
@@ -73,6 +78,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for SurfaceUpdate<U,
             rect: None,
             opacity: None,
             visible: None,
+            offset: None,
             slot: usize::MAX
         }
     }
@@ -124,6 +130,14 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<
     fn set_visible(&mut self, visible: bool) {
         self.updater.push(SurfaceUpdate {
             visible: Some(visible),
+            slot: self.slot,
+            ..Default::default()
+        }).unwrap();
+    }
+    
+    fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {
+        self.updater.push(SurfaceUpdate {
+            offset: Some(offset),
             slot: self.slot,
             ..Default::default()
         }).unwrap();
@@ -220,7 +234,8 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
             opacity: 255,
             shader: None,
             rect: area,
-            visible: true
+            visible: true,
+            offset: Coordinates::top_left()
         });
 
         Ok(BufferedSurface {
@@ -255,9 +270,9 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<
             if opacity > 0 && surface.visible {
                 if let Some(ref shader) = surface.shader {
                     let rect = &surface.rect;
-                    output.paint(shader, uniforms, rect);
                     for (virt_coords, output_pixel) in output.sample(rect) {
-                        let shader_pixel = shader.draw(&virt_coords, uniforms);
+                        let adjusted = virt_coords + surface.offset;
+                        let shader_pixel = shader.draw(&adjusted, uniforms);
                         *output_pixel = output_pixel.blend_pixel(shader_pixel, opacity);
                     }
                 }
@@ -383,6 +398,8 @@ pub trait Surface: Send {
 
     /// Sets the visibility of the surface without adjusting the stored opacity
     fn set_visible(&mut self, visible: bool);
+
+    fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>);
 }
 
 impl<T: Surface> Surface for [T] {
@@ -410,6 +427,10 @@ impl<T: Surface> Surface for [T] {
 
     fn set_visible(&mut self, visible: bool) {
         self.iter_mut().for_each(|f| { f.set_visible(visible); });
+    }
+    
+    fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {
+        self.iter_mut().for_each(|f| { f.set_offset(offset); });
     }
 }
 
