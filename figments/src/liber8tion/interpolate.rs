@@ -20,7 +20,7 @@ impl Fract8Ops for u8 {
             255 => self,
             _ => 
                 // borrowed from FastLED
-                (self as u16 * (1 + scale as u16)).unsigned_shr(8) as u8
+                (self as u16 * (1 + scale as u16)).wrapping_shr(8) as u8
         }
     }
 
@@ -29,7 +29,7 @@ impl Fract8Ops for u8 {
         match scale {
             0 => self,
             255 => other,
-            _ => (((self as u16).unsigned_shl(8).bitor(other as u16)).wrapping_add(other as u16 * scale as u16).wrapping_sub(self as u16 * scale as u16)).unsigned_shr(8) as u8
+            _ => (((self as u16).wrapping_shl(8).bitor(other as u16)).wrapping_add(other as u16 * scale as u16).wrapping_sub(self as u16 * scale as u16)).wrapping_shr(8) as u8
         }
     }
 
@@ -131,7 +131,7 @@ pub fn scale8<T: Fract8Ops>(i: T, scale: Fract8) -> T {
 
 #[inline]
 pub fn avg7(i: i8, j: i8) -> i8 {
-    i.unsigned_shr(1).wrapping_add(j.unsigned_shr(1)).wrapping_add(i & 0x1)
+    i.wrapping_shr(1).wrapping_add(j.wrapping_shr(1)).wrapping_add(i & 0x1)
 }
 
 pub fn grad8(hash: u8, x: i8, y: i8) -> i8 {
@@ -184,7 +184,7 @@ pub fn ease_in_out_quad(i: u8) -> u8 {
         i
     };
     let jj = scale8(j, j);
-    let jj2 = jj.unsigned_shl(1);
+    let jj2 = jj.wrapping_shl(1);
     if i & 0x80 == 0 {
         jj2
     } else {
