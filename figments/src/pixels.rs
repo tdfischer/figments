@@ -12,7 +12,7 @@ pub trait HardwarePixel: PixelFormat + Fract8Ops + Debug {}
 impl<T> HardwarePixel for T where T: PixelFormat + Fract8Ops + Debug {}
 
 /// Types that can blend the values of two pixels together (eg, overlaying RGBA8 on top of plain RGB8)
-pub trait PixelBlend<OverlayPixel: PixelFormat> {
+pub trait PixelBlend<OverlayPixel: PixelFormat>: PixelFormat {
     /// Blend a given pixel as an overlay by a given percentage
     fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
 }
