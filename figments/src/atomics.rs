@@ -8,6 +8,7 @@ pub struct AtomicMutex<T> {
     status: AtomicUsize
 }
 
+#[derive(Debug)]
 pub struct AtomicGuard<'a, T> {
     mutex: &'a AtomicMutex<T>
 }
