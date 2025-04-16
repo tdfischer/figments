@@ -5,7 +5,7 @@ use super::atomics::AtomicMutex;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use core::{marker::PhantomData, sync::atomic::AtomicBool};
+use core::{marker::PhantomData, num::Wrapping, ops::Add, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
 use core::fmt::{Debug, Formatter};
 use ringbuf::{traits::*, HeapRb};
@@ -249,6 +249,13 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
 #[derive(Default, Debug)]
 pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     pool: RefCell<ShaderChain<U, Space, Pixel>>
+}
+
+impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> BufferedSurfacePool<U, Space, Pixel> {
+    pub fn commit(&self) {
+        let mut b = self.pool.borrow_mut();
+        b.commit();
+    }
 }
 
 impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
