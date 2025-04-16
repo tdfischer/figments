@@ -144,7 +144,7 @@ struct UpdateQueue<U, Space: CoordinateSpace, Pixel: PixelFormat> {
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for UpdateQueue<U, Space, Pixel> {
     fn default() -> Self {
         Self {
-            pending: AtomicMutex::new(HeapRb::new(16)),
+            pending: AtomicMutex::new(HeapRb::new(128)),
             damaged: AtomicBool::new(false)
         }
     }
@@ -178,7 +178,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel>
     fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U, Space, Pixel>>> {
         if self.damaged.load(core::sync::atomic::Ordering::Relaxed) {
             let mut updates = self.pending.lock().unwrap();
-            let next = HeapRb::new(8);
+            let next = HeapRb::new(updates.capacity().into());
             self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
             Some(core::mem::replace(updates.as_mut(), next))
         } else {
