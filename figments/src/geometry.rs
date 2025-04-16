@@ -33,6 +33,14 @@ pub struct Coordinates<S: CoordinateSpace> {
     pub y: S::Data,
 }
 
+impl<S: CoordinateSpace> Add<Coordinates<S>> for Coordinates<S> where S::Data: Add<S::Data> {
+    type Output = Coordinates<S>;
+
+    fn add(self, rhs: Coordinates<S>) -> Self::Output {
+        Coordinates::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
 impl CoordinateOp for u8 {
     const MIN: u8 = 0;
     const MAX: u8 = 255;
