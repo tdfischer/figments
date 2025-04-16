@@ -304,9 +304,7 @@ pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfa
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
     shader: Option<SF>,
-    visible: Option<bool>,
-    _uniform: PhantomData<U>,
-    _pix: PhantomData<Pixel>
+    visible: Option<bool>
 }
 
 impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel: PixelFormat> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
@@ -317,9 +315,7 @@ impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpac
             opacity: None,
             shader: None,
             rect: None,
-            visible: None,
-            _uniform: PhantomData,
-            _pix: PhantomData
+            visible: None
         }
     }
 
