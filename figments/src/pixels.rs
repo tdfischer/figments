@@ -1,4 +1,4 @@
-use rgb::{Rgb, Rgba};
+use rgb::{ComponentSlice, Rgb, Rgba};
 use core::fmt::Debug;
 
 use crate::{liber8tion::interpolate::Fract8, prelude::Fract8Ops};
@@ -26,5 +26,15 @@ impl PixelBlend<Rgb<u8>> for Rgb<u8> {
 impl PixelBlend<Rgba<u8>> for Rgb<u8> {
     fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
         self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
+    }
+}
+
+impl PixelBlend<Rgba<u8>> for bool {
+    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
+        if opacity >= 128 {
+            (overlay.r as u32 + overlay.g as u32 + overlay.b as u32) >= 128
+        } else {
+            self
+        }
     }
 }

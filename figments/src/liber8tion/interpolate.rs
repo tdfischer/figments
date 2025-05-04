@@ -12,6 +12,33 @@ pub trait Fract8Ops {
     fn lerp8by8(self, other: Self, scale: Fract8) -> Self;
 }
 
+impl Fract8Ops for bool {
+    #[inline]
+    fn scale8(self, scale: Fract8) -> Self {
+        self && scale >= 128
+    }
+    
+    fn blend8(self, other: Self, scale: Fract8) -> Self {
+        if scale >= 128 {
+            self && other
+        } else {
+            self
+        }
+    }
+    
+    fn saturating_add(self, other: Self) -> Self {
+        self || other
+    }
+    
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        if scale >= 128 {
+            other
+        } else {
+            self
+        }
+    }
+}
+
 impl Fract8Ops for u8 {
     #[inline]
     fn scale8(self, scale: Fract8) -> Self {
