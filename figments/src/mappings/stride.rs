@@ -93,7 +93,7 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
 }
 
 /// A [CoordinateSpace] where Y means which segment along a strip of LEDs, and X is which pixel within that segment
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct StrideSpace {}
 impl CoordinateSpace for StrideSpace {
     type Data = usize;
