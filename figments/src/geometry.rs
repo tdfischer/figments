@@ -198,4 +198,15 @@ impl<Space: CoordinateSpace> Rectangle<Space> {
     pub const fn bottom(&self) -> Space::Data {
         self.bottom_right.y
     }
+
+    /// Produces a row-first iterator of every coordinate contained within this rectangle
+    pub fn iter_coords(&self) -> impl Iterator<Item = Coordinates<Space>>  + use<'_, Space> where Space::Data: Step {
+        (self.top()..=self.bottom()).map(|y| {
+            (self.left()..=self.right(), y)
+        }).flat_map(|(x_range, y)| {
+            x_range.map(move |x| {
+                Coordinates::new(x, y)
+            })
+        })
+    }
 }
