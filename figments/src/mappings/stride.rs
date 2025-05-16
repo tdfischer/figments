@@ -26,7 +26,7 @@ impl Stride {
 
 /// A mapping between 2d [Virtual] coordinates and a 2d display composed of individual strips of pixels
 #[derive(Debug)]
-pub struct StrideMapping<const STRIDE_NUM: usize = 24> {
+pub struct StrideMapping<const STRIDE_NUM: usize = 64> {
     strides: [Stride; STRIDE_NUM],
 
     /// The number of physical pixels in this map
