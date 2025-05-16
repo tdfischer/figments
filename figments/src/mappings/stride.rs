@@ -51,6 +51,7 @@ impl<const STRIDE_NUM: usize> StrideMapping<STRIDE_NUM> {
         let stride_count = stride_json.len();
         let mut physical_idx = 0;
         let mut size: Option<Rectangle<StrideSpace>> = None;
+        assert!(stride_count <= STRIDE_NUM);
         for stride_idx in 0..stride_count {
             let json_data = stride_json[stride_idx];
             let x = json_data.0;
