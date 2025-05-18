@@ -112,6 +112,11 @@ pub struct StrideView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
 
 impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
 
+    /// Returns the actual range of physical pixels that are selected for iteration
+    pub fn range(&self) -> Rectangle<StrideSpace> {
+        self.range
+    }
+
     /// Creates a new sampler that uses a [StrideMapping] to map 2d virtual coordinates to a 1d linear strip of pixels
     pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping, rect: &Rectangle<Virtual>) -> Self {
         // Zero-index shape of the pixel picking area
