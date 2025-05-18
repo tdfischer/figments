@@ -8,6 +8,9 @@ use num::traits::SaturatingAdd;
 use num::{One, pow, integer::Roots};
 use core::cmp::{min, max};
 
+#[cfg(feature="embedded-graphics")]
+use embedded_graphics::prelude::Size;
+
 /// Basic trait for operations on 2d coordinate components
 pub trait CoordinateOp: PartialOrd + PartialEq + Sub + Clone + Mul + Copy + One + Add + Eq + Ord + Debug + Send + Sync + SaturatingAdd where
 Self: Sub<Output=Self> + Add<Output=Self> {
@@ -118,6 +121,16 @@ impl<S: CoordinateSpace> Coordinates<S> {
     }
 }
 
+#[cfg(feature="embedded-graphics")]
+impl<Space: CoordinateSpace> Into<embedded_graphics::prelude::Point> for Coordinates<Space> where Space::Data: Into<i32> + Into<u32>  {
+    fn into(self) -> embedded_graphics::prelude::Point {
+        embedded_graphics::prelude::Point::new(
+            self.x.into(),
+            self.y.into()
+        )
+    }
+}
+
 /// The standard virtual [CoordinateSpace], which ranges from (0, 0) to (255, 255).
 #[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub struct Virtual {}
@@ -135,6 +148,16 @@ pub struct Rectangle<Space: CoordinateSpace> {
     pub top_left: Coordinates<Space>,
     /// Bottom right [Coordinates] of the rectangle
     pub bottom_right: Coordinates<Space>
+}
+
+#[cfg(feature="embedded-graphics")]
+impl<Space: CoordinateSpace> Into<embedded_graphics::primitives::Rectangle> for Rectangle<Space> where Space::Data: Into<i32> + Into<u32>  {
+    fn into(self) -> embedded_graphics::primitives::Rectangle {
+        embedded_graphics::primitives::Rectangle::new(
+            self.top_left.into(),
+            Size::new(self.width().into(), self.height().into())
+        )
+    }
 }
 
 impl<Space: CoordinateSpace> Rectangle<Space> {
