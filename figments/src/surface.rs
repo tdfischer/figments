@@ -5,7 +5,7 @@ use super::atomics::AtomicMutex;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use core::{marker::PhantomData, num::Wrapping, ops::Add, sync::atomic::AtomicBool};
+use core::{ops::{Deref, DerefMut}, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
 use core::fmt::{Debug, Formatter};
 use ringbuf::{traits::*, HeapRb};
@@ -418,14 +418,14 @@ pub trait Surface {
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>);
 }
 
-impl<T: Surface> Surface for [T] {
-    type Uniforms = T::Uniforms;
+impl<T: DerefMut<Target = S>, S: Surface> Surface for [T] {
+    type Uniforms = S::Uniforms;
 
-    type CoordinateSpace = T::CoordinateSpace;
+    type CoordinateSpace = S::CoordinateSpace;
 
-    type Pixel = T::Pixel;
+    type Pixel = S::Pixel;
 
-    fn set_shader<S: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, shader: S) {
+    fn set_shader<SH: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, _shader: SH) {
         unimplemented!();
     }
 
@@ -449,7 +449,6 @@ impl<T: Surface> Surface for [T] {
         self.iter_mut().for_each(|f| { f.set_offset(offset); });
     }
 }
-
 
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for Box<dyn Shader<U, Space, Pixel>> {
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
