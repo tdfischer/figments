@@ -135,16 +135,6 @@ impl<S: CoordinateSpace> Coordinates<S> {
     }
 }
 
-#[cfg(feature="embedded-graphics")]
-impl<Space: CoordinateSpace> Into<embedded_graphics::prelude::Point> for Coordinates<Space> where Space::Data: Into<i32> + Into<u32>  {
-    fn into(self) -> embedded_graphics::prelude::Point {
-        embedded_graphics::prelude::Point::new(
-            self.x.into(),
-            self.y.into()
-        )
-    }
-}
-
 /// The standard virtual [CoordinateSpace], which ranges from (0, 0) to (255, 255).
 #[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub struct Virtual {}
