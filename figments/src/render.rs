@@ -1,7 +1,4 @@
 //! The core rendering engine types
-use core::fmt::Debug;
-use rgb::{Rgb, Rgba};
-
 use super::geometry::*;
 
 use crate::pixels::*;
