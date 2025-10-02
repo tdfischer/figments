@@ -2,7 +2,6 @@
 //! 
 //! 
 use core::fmt::Debug;
-use core::iter::Step;
 use core::ops::{Add, Mul, Sub};
 use num::traits::SaturatingAdd;
 use num::{One, pow, integer::Roots};
@@ -20,6 +19,9 @@ Self: Sub<Output=Self> + Add<Output=Self> {
     const MAX: Self;
     /// Calculates the distance between two points
     fn distance(x1: Self, y1: Self, x2: Self, y2: Self) -> Self;
+
+    /// Returns an iterator over every value from start to end, inclusive
+    fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self>;
 }
 
 /// Trait for describing coordinate spaces
@@ -54,6 +56,10 @@ impl CoordinateOp for u8 {
         let dy = (max(y1, y2) - min(y1, y2)) as u16;
         (dx.saturating_mul(dx).saturating_add(dy.saturating_mul(dy))).sqrt() as u8
     }
+    
+    fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self> {
+        start..=end
+    }
 }
 
 impl CoordinateOp for u16 {
@@ -63,6 +69,10 @@ impl CoordinateOp for u16 {
     fn distance(x1: Self, y1: Self, x2: Self, y2: Self) -> Self {
         (pow(x2 - x1, 2) + pow(y2 - y1, 2)).sqrt()
     }
+
+    fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self> {
+        start..=end
+    }
 }
 
 impl CoordinateOp for usize {
@@ -71,6 +81,10 @@ impl CoordinateOp for usize {
 
     fn distance(x1: Self, y1: Self, x2: Self, y2: Self) -> Self {
         (pow(x2 - x1, 2) + pow(y2 - y1, 2)).sqrt()
+    }
+
+    fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self> {
+        start..=end
     }
 }
 
@@ -224,9 +238,10 @@ impl<Space: CoordinateSpace> Rectangle<Space> {
     }
 
     /// Produces a row-first iterator of every coordinate contained within this rectangle
-    pub fn iter_coords(&self) -> impl Iterator<Item = Coordinates<Space>>  + use<'_, Space> where Space::Data: Step {
-        (self.top()..=self.bottom()).map(|y| {
-            (self.left()..=self.right(), y)
+    // The strange bounds are due to not relying on std::iter::Step, which is unstable
+    pub fn iter_coords(&self) -> impl Iterator<Item = Coordinates<Space>>  + use<'_, Space> {
+        Space::Data::iter_range(self.top(), self.bottom()).map(|y| {
+            (Space::Data::iter_range(self.left(), self.right()), y)
         }).flat_map(|(x_range, y)| {
             x_range.map(move |x| {
                 Coordinates::new(x, y)
