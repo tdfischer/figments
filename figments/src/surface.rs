@@ -12,7 +12,7 @@ use ringbuf::{traits::*, HeapRb};
 
 use core::cell::RefCell;
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderBinding<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderBinding<U, Space, Pixel> where Rectangle<Space>: Debug {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ShaderBinding")
             .field("rect", &self.rect)
@@ -89,6 +89,13 @@ pub struct BufferedSurface<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     updater: Arc<UpdateQueue<U, Space, Pixel>>,
     slot: usize
 }
+
+impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for BufferedSurface<U, Space, Pixel> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BufferedSurface").field("updater", &self.updater).field("slot", &self.slot).finish()
+    }
+}
+
 
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<U, Space, Pixel> {
     type Uniforms = U;
@@ -201,10 +208,16 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel>
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 struct ShaderChain<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     bindings: Vec<ShaderBinding<U, Space, Pixel>>,
     updates: Arc<UpdateQueue<U, Space, Pixel>>
+}
+
+impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderChain<U, Space, Pixel> where Space: Debug, Space::Data: Debug {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ShaderChain").field("bindings", &self.bindings).field("updates", &self.updates).finish()
+    }
 }
 
 impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Space, Pixel> {
@@ -246,7 +259,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
 }
 
 /// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     pool: RefCell<ShaderChain<U, Space, Pixel>>
 }
@@ -294,7 +307,7 @@ pub trait Surfaces<Space: CoordinateSpace>: Send {
     type Surface: Surface<CoordinateSpace = Space>;
 
     /// Error type for operations
-    type Error: Debug;
+    type Error;
 
     /// Creates a new surface if possible over the given area
     fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error>;
