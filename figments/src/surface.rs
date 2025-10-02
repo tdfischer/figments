@@ -302,7 +302,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces<Space: CoordinateSpace>: Send {
+pub trait Surfaces<Space: CoordinateSpace> {
     /// The underlying surface type created by this backend
     type Surface: Surface<CoordinateSpace = Space>;
 
@@ -390,7 +390,7 @@ impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpac
 }
 
 /// A rectangular set of pixels that can be drawn on with a [Shader]
-pub trait Surface: Send {
+pub trait Surface {
     /// The type of uniform data that is supported by this shader
     type Uniforms;
 
