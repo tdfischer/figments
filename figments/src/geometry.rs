@@ -98,8 +98,6 @@ impl<S: CoordinateSpace> Coordinates<S> {
     }
  
     /// Returns a new coordinate that has been rotated 90 degrees around the center of the [CoordinateSpace] a given number of times
-    /// 
-    /// For example,
     pub fn rotated(&self, rotation: u8) -> Self {
         match rotation % 4 {
             1 => Self { x: self.y, y: self.x },
