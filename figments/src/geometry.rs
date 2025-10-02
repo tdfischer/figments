@@ -11,7 +11,7 @@ use core::cmp::{min, max};
 use embedded_graphics::prelude::Size;
 
 /// Basic trait for operations on 2d coordinate components
-pub trait CoordinateOp: PartialOrd + PartialEq + Sub + Clone + Mul + Copy + One + Add + Eq + Ord + Debug + Send + Sync + SaturatingAdd where
+pub trait CoordinateOp: PartialOrd + PartialEq + Sub + Clone + Mul + Copy + One + Add + Eq + Ord + Send + Sync + SaturatingAdd where
 Self: Sub<Output=Self> + Add<Output=Self> {
     /// The smallest possible value within a coordinate space
     const MIN: Self;
@@ -25,7 +25,7 @@ Self: Sub<Output=Self> + Add<Output=Self> {
 }
 
 /// Trait for describing coordinate spaces
-pub trait CoordinateSpace: 'static + Debug + Copy + Clone {
+pub trait CoordinateSpace: 'static + Copy + Clone {
     /// The underlying data type used for this coordinate space
     type Data: CoordinateOp;
 }
@@ -146,7 +146,7 @@ impl CoordinateSpace for Virtual {
 pub type VirtualCoordinates = Coordinates<Virtual>;
 
 /// A 2d rectangle specified with two [Coordinates]
-#[derive(PartialEq, Eq, Copy, Clone, Debug, PartialOrd)]
+#[derive(PartialEq, Eq, Copy, Clone, PartialOrd)]
 pub struct Rectangle<Space: CoordinateSpace> {
     /// Top left [Coordinates] of the rectangle
     pub top_left: Coordinates<Space>,
@@ -154,6 +154,11 @@ pub struct Rectangle<Space: CoordinateSpace> {
     pub bottom_right: Coordinates<Space>
 }
 
+impl<Space: CoordinateSpace> Debug for Rectangle<Space> where Space: Debug, Space::Data: Debug {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Rectangle").field("top_left", &self.top_left).field("bottom_right", &self.bottom_right).finish()
+    }
+}
 
 impl<Space: CoordinateSpace> Rectangle<Space> {
     /// Creates a new rectangle using two [Coordinates]
