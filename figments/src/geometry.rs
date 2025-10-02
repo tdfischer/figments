@@ -154,15 +154,6 @@ pub struct Rectangle<Space: CoordinateSpace> {
     pub bottom_right: Coordinates<Space>
 }
 
-#[cfg(feature="embedded-graphics")]
-impl<Space: CoordinateSpace> Into<embedded_graphics::primitives::Rectangle> for Rectangle<Space> where Space::Data: Into<i32> + Into<u32>  {
-    fn into(self) -> embedded_graphics::primitives::Rectangle {
-        embedded_graphics::primitives::Rectangle::new(
-            self.top_left.into(),
-            Size::new(self.width().into(), self.height().into())
-        )
-    }
-}
 
 impl<Space: CoordinateSpace> Rectangle<Space> {
     /// Creates a new rectangle using two [Coordinates]
@@ -237,5 +228,25 @@ impl<Space: CoordinateSpace> Rectangle<Space> {
                 Coordinates::new(x, y)
             })
         })
+    }
+}
+
+#[cfg(feature="embedded-graphics")]
+impl<Space: CoordinateSpace> From<Coordinates<Space>> for embedded_graphics::prelude::Point where Space::Data: Into<i32> + Into<u32>  {
+    fn from(val: Coordinates<Space>) -> Self {
+        embedded_graphics::prelude::Point::new(
+            val.x.into(),
+            val.y.into()
+        )
+    }
+}
+
+#[cfg(feature="embedded-graphics")]
+impl<Space: CoordinateSpace> From<Rectangle<Space>> for embedded_graphics::primitives::Rectangle where Space::Data: Into<i32> + Into<u32>  {
+    fn from(val: Rectangle<Space>) -> Self {
+        embedded_graphics::primitives::Rectangle::new(
+            val.top_left.into(),
+            Size::new(val.width().into(), val.height().into())
+        )
     }
 }
