@@ -23,7 +23,7 @@ embedded-graphics = ["dep:embedded-graphics"]
 
 [dependencies]
 rgb = "0.8"
-num = "0.4"
+num = { version = "0.4", default-features = false }
 embedded-graphics = { version = "0.8", optional = true }
 
 # alloc
