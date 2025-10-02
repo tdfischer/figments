@@ -1,5 +1,4 @@
-use num::PrimInt;
-use core::ops::{Add, BitOr, Sub};
+use core::ops::BitOr;
 
 use rgb::Rgb;
 
