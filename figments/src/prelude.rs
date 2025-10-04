@@ -1,7 +1,6 @@
 pub use crate::{
     geometry::*,
     render::*,
-    pixbuf::*,
     pixels::*,
     liber8tion::Hsv
 };
