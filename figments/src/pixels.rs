@@ -1,5 +1,4 @@
-use rgb::{ComponentSlice, Rgb, Rgba};
-use core::fmt::Debug;
+use rgb::{Rgb, Rgba};
 
 use crate::{liber8tion::interpolate::Fract8, prelude::Fract8Ops};
 
@@ -11,17 +10,51 @@ impl<T> PixelFormat for T where T: PixelBlend<Self> + Send + Sync + Copy + Defau
 pub trait PixelBlend<OverlayPixel: PixelFormat> {
     /// Blend a given pixel as an overlay by a given percentage
     fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
+
+    /// Blend a pixel by multiplying it by another pixel
+    fn multiply(self, overlay: OverlayPixel) -> Self;
 }
 
 impl PixelBlend<Rgb<u8>> for Rgb<u8> {
     fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
         self.blend8(overlay, opacity)
     }
+    
+    fn multiply(self, overlay: Rgb<u8>) -> Self {
+        Self::new(
+            self.r.scale8(overlay.r),
+            self.g.scale8(overlay.g),
+            self.b.scale8(overlay.b),
+        )
+    }
+}
+
+impl PixelBlend<Rgba<u8>> for Rgba<u8> {
+    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
+        self.blend8(overlay, opacity)
+    }
+    
+    fn multiply(self, overlay: Rgba<u8>) -> Self {
+        Self::new(
+            self.r.scale8(overlay.r),
+            self.g.scale8(overlay.g),
+            self.b.scale8(overlay.b),
+            self.a.scale8(overlay.a)
+        )
+    }
 }
 
 impl PixelBlend<Rgba<u8>> for Rgb<u8> {
     fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
         self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
+    }
+    
+    fn multiply(self, overlay: Rgba<u8>) -> Self {
+        Self::new(
+            self.r.scale8(overlay.r),
+            self.g.scale8(overlay.g),
+            self.b.scale8(overlay.b),
+        )
     }
 }
 
@@ -32,5 +65,9 @@ impl PixelBlend<Rgba<u8>> for bool {
         } else {
             self
         }
+    }
+    
+    fn multiply(self, overlay: Rgba<u8>) -> Self {
+        overlay.iter().map(|x| { x as u16 }).sum::<u16>() / 4 >= 128
     }
 }
