@@ -25,7 +25,7 @@ Self: Sub<Output=Self> + Add<Output=Self> {
 }
 
 /// Trait for describing coordinate spaces
-pub trait CoordinateSpace: 'static + Copy + Clone {
+pub trait CoordinateSpace: 'static + Copy + Clone + Default {
     /// The underlying data type used for this coordinate space
     type Data: CoordinateOp;
 }
