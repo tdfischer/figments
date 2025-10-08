@@ -35,6 +35,7 @@ struct ShaderBinding<U, Space: CoordinateSpace, Pixel: PixelFormat> {
 }
 
 struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+    #[allow(clippy::type_complexity)]
     shader: Option<Option<Box<dyn Shader<U, Space, Pixel>>>>,
     rect: Option<Rectangle<Space>>,
     opacity: Option<u8>,
