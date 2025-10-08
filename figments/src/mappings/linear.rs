@@ -6,13 +6,13 @@ use crate::pixels::*;
 use crate::render::Sample;
 
 /// Linear coordinate space where Y is meaningless and X points to a unique pixel
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct LinearSpace {}
 impl CoordinateSpace for LinearSpace {
     type Data = usize;
 }
 
-impl<'a, Pixel: HardwarePixel + 'a, const SIZE: usize> Sample<'a, LinearSpace> for [Pixel; SIZE]{
+impl<'a, Pixel: PixelFormat + 'a, const SIZE: usize> Sample<'a, LinearSpace> for [Pixel; SIZE]{
     type Output = Pixel;
 
     fn sample(&mut self, rect: &Rectangle<LinearSpace>) -> impl Iterator<Item = (Coordinates<LinearSpace>, &'a mut Self::Output)> {

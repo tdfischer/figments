@@ -3,7 +3,7 @@ use core::ops::IndexMut;
 
 use crate::geometry::*;
 use crate::liber8tion::interpolate::scale8;
-use crate::pixels::*;
+use crate::pixels::PixelFormat;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
@@ -103,14 +103,14 @@ pub type StrideCoords = Coordinates<StrideSpace>;
 
 /// A [CoordinateView] that maps [Virtual] coordinates to stride based coordinates
 #[derive(Debug)]
-pub struct StrideView<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> {
+pub struct StrideView<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> {
     map: &'a StrideMapping,
     range: Rectangle<StrideSpace>,
     cur: StrideCoords,
     pixbuf: &'a mut PB,
 }
 
-impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
+impl<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
 
     /// Returns the actual range of physical pixels that are selected for iteration
     pub fn range(&self) -> Rectangle<StrideSpace> {
@@ -148,7 +148,7 @@ impl<'a, P: HardwarePixel, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB
     }
 }
 
-impl<'a, P: HardwarePixel + 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, PB> {
+impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, PB> {
     type Item = (VirtualCoordinates, &'a mut P);
 
     fn next(&mut self) -> Option<Self::Item> {
