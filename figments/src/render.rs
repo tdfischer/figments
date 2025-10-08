@@ -7,7 +7,7 @@ use crate::pixels::*;
 pub trait Sample<'a, Space: CoordinateSpace> {
 
     /// The type of pixel this sampler supports
-    type Output: HardwarePixel + 'a;
+    type Output: PixelFormat + 'a;
 
     /// Provides a [PixelView] over the given [Rectangle] selection
     fn sample(&mut self, rect: &Rectangle<Space>) -> impl Iterator<Item = (Coordinates<Space>, &'a mut Self::Output)>;
