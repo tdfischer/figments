@@ -266,6 +266,7 @@ pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
 }
 
 impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> BufferedSurfacePool<U, Space, Pixel> {
+    /// Commits the queue of pending surface changes
     pub fn commit(&self) {
         let mut b = self.pool.borrow_mut();
         b.commit();
@@ -313,6 +314,7 @@ pub trait Surfaces<Space: CoordinateSpace> {
     /// Creates a new surface if possible over the given area
     fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error>;
 
+    /// Draws the surface to a sampler output
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
         where 
             S: Sample<'a, Space>,
@@ -416,6 +418,7 @@ pub trait Surface {
     /// Sets the visibility of the surface without adjusting the stored opacity
     fn set_visible(&mut self, visible: bool);
 
+    /// Sets the scroll offset of the surface without adjusting shader coordinates
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>);
 }
 
