@@ -1,6 +1,6 @@
 use core::ops::BitOr;
 
-use rgb::Rgb;
+use rgb::{Rgb, Rgba};
 
 pub type Fract8 = u8;
 
@@ -103,6 +103,55 @@ impl Fract8Ops for usize {
             let scaled = scale8(delta, scale);
             self - scaled
         }
+    }
+}
+
+
+impl Fract8Ops for Rgba<u8> {
+    #[inline]
+    fn scale8(self, scale: Fract8) -> Self {
+        Rgba::new(
+            self.r.scale8(scale),
+            self.g.scale8(scale),
+            self.b.scale8(scale),
+            self.a.scale8(scale)
+        )
+    }
+
+    #[inline]
+    fn blend8(self, other: Self, scale: Fract8) -> Self {
+        match scale {
+            0 => self,
+            255 => other,
+            _ => match (other.r, other.g, other.b) {
+                (0, 0, 0) => self,
+                _ => Rgba::new(
+                    self.r.blend8(other.r, scale),
+                    self.g.blend8(other.g, scale),
+                    self.b.blend8(other.b, scale),
+                    self.a.blend8(other.a, scale)
+                )
+            }
+        }
+    }
+
+    #[inline]
+    fn saturating_add(self, other: Self) -> Self {
+        Rgba::new(
+            self.r.saturating_add(other.r),
+            self.g.saturating_add(other.g),
+            self.b.saturating_add(other.b),
+            self.a.saturating_add(other.a)
+        )
+    }
+    
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        Rgba::new(
+            self.r.lerp8by8(other.r, scale),
+            self.g.lerp8by8(other.g, scale),
+            self.b.lerp8by8(other.b, scale),
+            self.a.lerp8by8(other.a, scale)
+        )
     }
 }
 
