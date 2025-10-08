@@ -5,7 +5,7 @@ use super::atomics::AtomicMutex;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use core::{ops::{Deref, DerefMut}, sync::atomic::AtomicBool};
+use core::{marker::PhantomData, ops::DerefMut, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
 use core::fmt::{Debug, Formatter};
 use ringbuf::{traits::*, HeapRb};
@@ -458,4 +458,66 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for 
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
         self.as_ref().draw(surface_coords, uniforms)
     }
+}
+
+pub struct NullBufferPool<S: Surface>(NullSurface<S::Uniforms, S::CoordinateSpace, S::Pixel>);
+pub struct NullSurface<U, Space: CoordinateSpace, P: PixelFormat>(PhantomData<Space>, PhantomData<U>, PhantomData<P>);
+
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullSurface<U, Space, P> {
+    fn default() -> Self {
+        Self(Default::default(), Default::default(), Default::default())
+    }
+}
+
+impl<S: Surface + Default> Default for NullBufferPool<S> where S::Uniforms: Default {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
+impl<S: Surface> core::fmt::Debug for NullBufferPool<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("NullBufferPool").finish()
+    }
+}
+
+impl<U: Default + core::fmt::Debug, Space: CoordinateSpace, P: PixelFormat> core::fmt::Debug for NullSurface<U, Space, P> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("NullSurface").finish()
+    }
+}
+
+impl<U, Space: CoordinateSpace, P: PixelFormat> Surface for NullSurface<U, Space, P> {
+    type Uniforms = U;
+
+    type CoordinateSpace = Space;
+
+    type Pixel = P;
+
+    fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, shader: T) {}
+
+    fn clear_shader(&mut self) {}
+
+    fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>) {}
+
+    fn set_opacity(&mut self, opacity: u8) {}
+
+    fn set_visible(&mut self, visible: bool) {}
+
+    fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {}
+}
+
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for NullBufferPool<NullSurface<U, Space, P>> {
+    type Surface = NullSurface<U, Space, P>;
+
+    type Error = ();
+
+    fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error> {
+        Ok(NullSurface::default())
+    }
+
+    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &<Self::Surface as Surface>::Uniforms)
+        where 
+            Smp: Sample<'a, Space>,
+            Smp::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {}
 }
