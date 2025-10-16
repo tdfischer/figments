@@ -4,6 +4,7 @@ use core::ops::IndexMut;
 use crate::geometry::*;
 use crate::liber8tion::interpolate::scale8;
 use crate::pixels::PixelFormat;
+use crate::render::Sample;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
@@ -130,7 +131,6 @@ impl<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> 
                 scale8(map.size.height(), rect.bottom_right.y) + map.size.top()
             )
         );
-        //log::info!("range={:?}", range);
         debug_assert!(
             range.bottom_right.x <= map.size.width() &&
             range.bottom_right.y <= map.size.height(),
@@ -162,15 +162,16 @@ impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for Stri
                 self.cur.y = cur_stride.y;
             }
 
-            // If we are at the bottom of our rectangle, or our stride, go to the next stride.
-            if self.cur.y > self.range.bottom_right.y || self.cur.y > cur_stride.y + cur_stride.length - 1 {
+            // If we are past the bottom of our selection rectangle, or our current stride, go to the next stride.
+            if self.cur.y > self.range.bottom_right.y + 1 || self.cur.y > cur_stride.y + cur_stride.length {
                 self.cur.x += 1;
+                // Reset our y position to the top of the rectangle; if the rectangle is higher than the y of the next stride, this is fixed at the top of the loop
                 self.cur.y = self.range.top_left.y;
                 continue;
             }
 
             // By now, we must be safely somewhere inside our current stride
-            //debug_assert!(self.cur.y < cur_stride.y + cur_stride.length, "coords={:?} out of bounds for stride={:?} view={:?}", self.cur, cur_stride, self);
+            //debug_assert!(self.cur.y <= cur_stride.y + cur_stride.length, "coords={:?} out of bounds for stride={:?}", self.cur, cur_stride);
 
             // Move to the next coord and return
             let physical_coords = self.cur;
@@ -181,8 +182,8 @@ impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for Stri
                 physical_coords.y.saturating_mul(self.step_size.y)
             );*/
 
-            let x_pct = (physical_coords.x - self.range.left()) as f32 / self.range.width() as f32;
-            let y_pct = (physical_coords.y - self.range.top()) as f32 / self.range.height() as f32;
+            let x_pct = (physical_coords.x - self.range.left()) as f32 / (self.range.width() + 1) as f32;
+            let y_pct = (physical_coords.y - self.range.top()) as f32 / (self.range.height() + 1) as f32;
 
             let virtual_coords = VirtualCoordinates::new(
                 (255f32 * x_pct) as u8,
@@ -199,5 +200,63 @@ impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for Stri
         }
 
         None
+    }
+}
+
+struct StrideSampler<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> {
+    map: &'a StrideMapping,
+    pixbuf: &'a mut PB
+}
+
+impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P, PB> {
+    pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping) -> Self {
+        Self {
+            pixbuf,
+            map
+        }
+    }
+}
+
+impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Sample<'a, Virtual> for StrideSampler<'a, P, PB> {
+    type Output = P;
+
+    fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Output)> {
+        let bufref = unsafe {
+            &mut *(self.pixbuf as *mut PB)
+        };
+        let mapref = unsafe {
+            & *(self.map as *const StrideMapping)
+        };
+        StrideView::new(bufref, mapref, rect)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use rgb::Rgb;
+    use crate::{mappings::stride::*, prelude::*};
+    use core::array;
+
+    #[test]
+    fn test_full_range_sample() {
+        // The buffer starts with increasingly red pixels
+        const PIXEL_COUNT: usize = 256;
+        let mut pixbuf: [Rgb<u8>; PIXEL_COUNT] = array::from_fn(|n| { Rgb::new(n as u8, 0, 0) });
+        let map = StrideMapping::default();
+        let mut sampler = StrideSampler::new(&mut pixbuf, &map);
+        let mut num_sampled = 0;
+
+        // Sample all pixels. Since the default stride mapping is a 255px long strip, this should always have x = 0, and y = physical index
+        for (coords, pix) in sampler.sample(&Rectangle::everything()) {
+            *pix = Rgb::new(pix.r, coords.x as u8, coords.y as u8);
+            num_sampled += 1;
+        }
+
+        assert_eq!(num_sampled, PIXEL_COUNT, "Expected to sample {PIXEL_COUNT} pixels, but got {num_sampled} {pixbuf:?}");
+
+        // Read back the pixels to make sure the red and green were }unchanged, and blue is updated
+        for (idx, pix) in pixbuf[..].into_iter().enumerate() {
+            assert_eq!(pix, &Rgb::new(idx as u8, 0, idx as u8), "Pixel {idx} of {PIXEL_COUNT} has incorrect color {pix:?} while sampling everything: {pixbuf:?}");
+        }
     }
 }
