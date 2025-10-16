@@ -9,6 +9,7 @@ pub trait Sample<'a, Space: CoordinateSpace> {
     /// The type of pixel this sampler supports
     type Output: PixelFormat + 'a;
 
+    //FIXME: Moving 'a into sample<'a>() and type Iterator<'a>: Iterator<...> would allow implementations without unsafe {} blocks on basic arrays
     /// Provides a [PixelView] over the given [Rectangle] selection
     fn sample(&mut self, rect: &Rectangle<Space>) -> impl Iterator<Item = (Coordinates<Space>, &'a mut Self::Output)>;
 }
