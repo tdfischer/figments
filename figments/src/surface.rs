@@ -521,3 +521,37 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
             Smp: Sample<'a, Space> + ?Sized,
             Smp::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {}
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::mappings::linear::LinearSpace;
+    #[test]
+    fn test_shaderchain() {
+        let mut c: ShaderChain<(), LinearSpace, Rgb<u8>> = Default::default();
+        assert_eq!(c.bindings.len(), 0, "Blank ShaderChain should come with zero bindings");
+        c.commit();
+        let mut sfc = c.new_surface(Rectangle::everything()).expect("Could not construct a new surface");
+        assert_eq!(c.bindings.len(), 1, "Creating a new ShaderChain should create a new binding");
+        // New surfaces should default to visible
+        assert_eq!(c.bindings[0].visible, true);
+        sfc.set_visible(false);
+        sfc.set_opacity(128);
+        // Surfaces require a commit before changes are visible on the bindings
+        assert_eq!(c.bindings[0].visible, true);
+        assert_eq!(c.bindings[0].opacity, 255);
+        c.commit();
+        // Committing changes should update bindings
+        assert_eq!(c.bindings[0].visible, false);
+        assert_eq!(c.bindings[0].opacity, 128);
+    }
+
+    #[test]
+    fn test_bufferpool() {
+        let mut pool: BufferedSurfacePool<(), LinearSpace, Rgb<u8>> = Default::default();
+        let mut sfc = pool.new_surface(Rectangle::everything());
+        pool.commit();
+        let mut pixbuf = [Rgb::default(); 1];
+        pool.render_to(&mut pixbuf[..], &());
+    }
+}
