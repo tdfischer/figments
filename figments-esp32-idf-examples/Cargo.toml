@@ -1,0 +1,36 @@
+[package]
+name = "figments-esp32-idf-examples"
+version = "0.1.0"
+description = "Examples and demos of using Figments on the ESP32 with the IDF SDK"
+readme = "README.md"
+repository = "https://github.com/tdfischer/figments"
+authors = ["tdfischer"]
+edition = "2021"
+rust-version = "1.77"
+license = "LGPL-2.1-or-later"
+default-run = "rainbow"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+strip = true
+panic = "abort"
+
+
+[features]
+default = []
+esp32s3 = []
+
+[dependencies]
+log = { version = "0.4", default-features = false }
+esp-idf-svc = { version = "0.51", default-features = false, features = ["alloc", "binstart", "std", "native"] }
+figments = { path = "../figments/", features = ["alloc", "std", "embedded-graphics"] }
+figments-render = { path = "../figments-render" }
+rgb = "0.8.50"
+ws2812-esp32-rmt-driver = { version = "0.12.0", default-features = false, features = ["smart-leds-trait", "std"] }
+smart-leds-trait = "0.3.1"
+smart-leds = "0.4.0"
+
+[build-dependencies]
+embuild = "0.33"
