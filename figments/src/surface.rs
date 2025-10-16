@@ -283,7 +283,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<
     
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
         where 
-            S: Sample<'a, Space>,
+            S: Sample<'a, Space> + ?Sized,
             S::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {
         let mut b = self.pool.borrow_mut();
         b.commit();
@@ -317,7 +317,7 @@ pub trait Surfaces<Space: CoordinateSpace> {
     /// Draws the surface to a sampler output
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
         where 
-            S: Sample<'a, Space>,
+            S: Sample<'a, Space> + ?Sized,
             S::Output: PixelBlend<<Self::Surface as Surface>::Pixel>;
 }
 
@@ -518,6 +518,6 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
 
     fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &<Self::Surface as Surface>::Uniforms)
         where 
-            Smp: Sample<'a, Space>,
+            Smp: Sample<'a, Space> + ?Sized,
             Smp::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {}
 }
