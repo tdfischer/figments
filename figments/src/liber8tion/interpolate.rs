@@ -41,13 +41,7 @@ impl Fract8Ops for bool {
 impl Fract8Ops for u8 {
     #[inline]
     fn scale8(self, scale: Fract8) -> Self {
-        match scale {
-            0 => 0,
-            255 => self,
-            _ => 
-                // borrowed from FastLED
-                (self as u16 * (1 + scale as u16)).wrapping_shr(8) as u8
-        }
+        (self as f32 * (scale as f32 / 255f32)) as u8
     }
 
     #[inline]
