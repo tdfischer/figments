@@ -1,13 +1,9 @@
-use core::{array, ops::RemAssign};
 use core::marker::Copy;
 use core::convert::AsRef;
 use core::result::Result;
 use core::iter::Iterator;
 
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
-
-#[cfg(feature="micromath")]
-use micromath::F32Ext as _;
 
 use figments::prelude::*;
 
