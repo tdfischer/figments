@@ -47,6 +47,19 @@ impl<S: CoordinateSpace> Add<Coordinates<S>> for Coordinates<S> where S::Data: A
     }
 }
 
+impl CoordinateOp for i32 {
+    const MIN: i32 = i32::MIN;
+    const MAX: i32 = i32::MAX;
+    
+    fn distance(x1: Self, y1: Self, x2: Self, y2: Self) -> Self {
+        todo!()
+    }
+    
+    fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self> {
+        start..=end
+    }
+}
+
 impl CoordinateOp for u8 {
     const MIN: u8 = 0;
     const MAX: u8 = 255;
