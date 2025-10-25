@@ -36,3 +36,15 @@ pub trait OutputAsync<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace,
 
     fn controls(&self) -> Option<&Self::Controls>;
 }
+
+#[derive(Default, Debug, Clone, Copy)]
+pub struct NullControls {}
+
+impl Brightness for NullControls {
+    fn set_brightness(&mut self, brightness: u8) {}
+    fn set_on(&mut self, is_on: bool) {}
+}
+
+impl GammaCorrected for NullControls {
+    fn set_gamma(&mut self, gamma: GammaCurve) {}
+}
