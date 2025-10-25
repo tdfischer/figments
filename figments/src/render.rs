@@ -20,6 +20,14 @@ pub trait Shader<Uniforms, Space: CoordinateSpace, Pixel: PixelFormat>: Send {
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &Uniforms) -> Pixel;
 }
 
+/// Types that can push pixels into samplers
+pub trait RenderSource<Uniforms, Space: CoordinateSpace, Src: PixelFormat, Dst: PixelSink<Src>> {
+    /// Draws this source's pixels into the sampler
+    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &Uniforms)
+        where 
+            Smp: Sample<'a, Space, Output = Dst> + 'a;
+}
+
 impl<T, U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for T where T: Send + Fn(&Coordinates<Space>, &U) -> Pixel {
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
         self(surface_coords, uniforms)
@@ -35,14 +43,14 @@ pub trait Painter<U, Space: CoordinateSpace, Input: PixelFormat> {
     fn paint(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U, rect: &Rectangle<Space>);
 }
 
-impl<'a, U, Space: CoordinateSpace, Input: PixelFormat + 'static, T> Painter<U, Space, Input> for T where T: Sample<'a, Space>, T::Output: PixelBlend<Input> {
+impl<'a, U, Space: CoordinateSpace, Input: PixelFormat + 'static, T> Painter<U, Space, Input> for T where T: Sample<'a, Space>, T::Output: PixelSink<Input> {
     fn fill(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U) {
         self.paint(shader, uniforms, &Rectangle::everything());
     }
 
     fn paint(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U, rect: &Rectangle<Space>) {
         for (coords, pixel) in self.sample(rect) {
-            *pixel = pixel.blend_pixel(shader.draw(&coords, uniforms), 255);
+            pixel.set(&shader.draw(&coords, uniforms));
         }
     }
 }

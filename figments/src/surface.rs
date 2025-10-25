@@ -273,18 +273,19 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> BufferedSurfacePool
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
     type Error = ();
     type Surface = BufferedSurface<U, Space, Pixel>;
     
     fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error> {
         self.pool.borrow_mut().new_surface(area)
     }
-    
-    fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
+}
+
+impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, HwPixel: Clone + 'static + PixelBlend<Pixel> + PixelSink<Pixel> + PixelSink<HwPixel>> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
+    fn render_to<'a, S>(&self, output: &mut S, uniforms: &U)
         where 
-            S: Sample<'a, Space> + ?Sized,
-            S::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {
+            S: Sample<'a, Space, Output = HwPixel> + ?Sized + 'a {
         let mut b = self.pool.borrow_mut();
         b.commit();
         for surface in &b.bindings {
@@ -295,7 +296,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<
                     for (virt_coords, output_pixel) in output.sample(rect) {
                         let adjusted = virt_coords + surface.offset;
                         let shader_pixel = shader.draw(&adjusted, uniforms);
-                        *output_pixel = output_pixel.blend_pixel(shader_pixel, opacity);
+                        output_pixel.set(&output_pixel.clone().blend_pixel(shader_pixel, opacity));
                     }
                 }
             }
@@ -304,7 +305,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static> Surfaces<
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces<Space: CoordinateSpace> {
+pub trait Surfaces<Space: CoordinateSpace>: RenderSource<<Self::Surface as Surface>::Uniforms, Space, <Self::Surface as Surface>::Pixel, <Self::Surface as Surface>::Pixel> {
     /// The underlying surface type created by this backend
     type Surface: Surface<CoordinateSpace = Space>;
 
@@ -313,12 +314,6 @@ pub trait Surfaces<Space: CoordinateSpace> {
 
     /// Creates a new surface if possible over the given area
     fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error>;
-
-    /// Draws the surface to a sampler output
-    fn render_to<'a, S>(&self, output: &mut S, uniforms: &<Self::Surface as Surface>::Uniforms)
-        where 
-            S: Sample<'a, Space> + ?Sized,
-            S::Output: PixelBlend<<Self::Surface as Surface>::Pixel>;
 }
 
 /// Builder pattern API for creating surfaces
@@ -515,11 +510,13 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
     fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error> {
         Ok(NullSurface::default())
     }
+}
 
-    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &<Self::Surface as Surface>::Uniforms)
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> RenderSource<U, Space, P, P> for NullBufferPool<NullSurface<U, Space, P>> {
+    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &U)
         where 
-            Smp: Sample<'a, Space> + ?Sized,
-            Smp::Output: PixelBlend<<Self::Surface as Surface>::Pixel> {}
+            Smp: Sample<'a, Space> + ?Sized + 'a,
+            Smp::Output: PixelSink<P> {}
 }
 
 #[cfg(test)]
