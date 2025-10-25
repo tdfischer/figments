@@ -15,6 +15,16 @@ pub trait PixelBlend<OverlayPixel: PixelFormat> {
     fn multiply(self, overlay: OverlayPixel) -> Self;
 }
 
+pub trait PixelSink<Src> {
+    fn set(&mut self, pixel: &Src);
+}
+
+impl<Src> PixelSink<Src> for Src where Src: Copy {
+    fn set(&mut self, pixel: &Src) {
+        *self = *pixel;
+    }
+}
+
 impl PixelBlend<Rgb<u8>> for Rgb<u8> {
     fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
         self.blend8(overlay, opacity)
