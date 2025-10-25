@@ -2,9 +2,9 @@ use rgb::{Rgb, Rgba};
 
 use crate::{liber8tion::interpolate::Fract8, prelude::Fract8Ops};
 
-/// Types that represent software or hardware based pixel formats
-pub trait PixelFormat: PixelBlend<Self> + Send + Sync + Copy + Default {}
-impl<T> PixelFormat for T where T: PixelBlend<Self> + Send + Sync + Copy + Default {}
+/// Types that represent RAM based pixel formats
+pub trait PixelFormat: PixelBlend<Self> + Send + Copy + Default {}
+impl<T> PixelFormat for T where T: PixelBlend<Self> + Send + Copy + Default {}
 
 /// Types that can blend the value of another pixel
 pub trait PixelBlend<OverlayPixel: PixelFormat> {
@@ -22,6 +22,12 @@ pub trait PixelSink<Src> {
 impl<Src> PixelSink<Src> for Src where Src: Copy {
     fn set(&mut self, pixel: &Src) {
         *self = *pixel;
+    }
+}
+
+impl PixelSink<Rgba<u8>> for Rgb<u8> {
+    fn set(&mut self, pixel: &Rgba<u8>) {
+        *self = pixel.rgb()
     }
 }
 
@@ -79,5 +85,21 @@ impl PixelBlend<Rgba<u8>> for bool {
     
     fn multiply(self, overlay: Rgba<u8>) -> Self {
         overlay.iter().map(|x| { x as u16 }).sum::<u16>() / 4 >= 128
+    }
+}
+
+#[cfg(feature="embedded-graphics")]
+mod embedded_impl {
+    use embedded_graphics::pixelcolor::BinaryColor;
+    use super::*;
+
+    impl PixelBlend<BinaryColor> for BinaryColor {
+        fn blend_pixel(self, overlay: BinaryColor, opacity: Fract8) -> Self {
+            overlay
+        }
+
+        fn multiply(self, overlay: BinaryColor) -> Self {
+            overlay
+        }
     }
 }
