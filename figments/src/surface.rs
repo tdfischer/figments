@@ -285,7 +285,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy> Su
 impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, HwPixel: Clone + 'static + PixelBlend<Pixel> + PixelSink<Pixel> + PixelSink<HwPixel>> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &U)
         where 
-            S: Sample<'a, Space, Output = HwPixel> + ?Sized + 'a {
+            S: Sample<'a, Space, Output = HwPixel> + ?Sized {
         let mut b = self.pool.borrow_mut();
         b.commit();
         for surface in &b.bindings {
@@ -513,9 +513,9 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
 }
 
 impl<U: Default, Space: CoordinateSpace, P: PixelFormat> RenderSource<U, Space, P, P> for NullBufferPool<NullSurface<U, Space, P>> {
-    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &U)
+    fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &U)
         where 
-            Smp: Sample<'a, Space> + ?Sized + 'a,
+            Smp: Sample<'a, Space> + ?Sized,
             Smp::Output: PixelSink<P> {}
 }
 

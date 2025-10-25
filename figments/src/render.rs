@@ -7,7 +7,7 @@ use crate::pixels::*;
 pub trait Sample<'a, Space: CoordinateSpace> {
 
     /// The type of pixel this sampler supports
-    type Output: PixelFormat + 'a;
+    type Output: 'a;
 
     //FIXME: Moving 'a into sample<'a>() and type Iterator<'a>: Iterator<...> would allow implementations without unsafe {} blocks on basic arrays
     /// Provides a [PixelView] over the given [Rectangle] selection
@@ -23,7 +23,7 @@ pub trait Shader<Uniforms, Space: CoordinateSpace, Pixel: PixelFormat>: Send {
 /// Types that can push pixels into samplers
 pub trait RenderSource<Uniforms, Space: CoordinateSpace, Src: PixelFormat, Dst: PixelSink<Src>> {
     /// Draws this source's pixels into the sampler
-    fn render_to<'a, Smp>(&self, output: &mut Smp, uniforms: &Uniforms)
+    fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &Uniforms)
         where 
             Smp: Sample<'a, Space, Output = Dst>;
 }
