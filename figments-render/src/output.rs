@@ -15,7 +15,6 @@ pub trait GammaCorrected {
 
 /// A hardware output that provides an interface to the underlying hardware pixels, including actually turning pixels into photons
 pub trait Output<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> + 'a {
-    type HardwarePixel: PixelSink<Self::Output>;
     type Error;
     type Controls: Brightness + GammaCorrected;
 
@@ -27,7 +26,6 @@ pub trait Output<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> + 'a
 
 /// A hardware output that provides an interface to the underlying hardware pixels, including actually turning pixels into photons, but async flavored
 pub trait OutputAsync<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> + 'a {
-    type HardwarePixel: PixelSink<Self::Output>;
     type Error;
     type Controls: Brightness + GammaCorrected;
 
