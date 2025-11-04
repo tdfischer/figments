@@ -1,11 +1,11 @@
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 
 #[derive(Default, Debug)]
 pub struct AtomicMutex<T> {
     inner: UnsafeCell<T>,
-    status: AtomicUsize
+    status: AtomicBool
 }
 
 #[derive(Debug)]
@@ -28,7 +28,7 @@ impl<T> DerefMut for AtomicGuard<'_, T> {
 
 impl<T> Drop for AtomicGuard<'_, T> {
     fn drop(&mut self) {
-        self.mutex.status.store(0, Ordering::Release);
+        self.mutex.status.store(false, Ordering::Release);
     }
 }
 
@@ -39,7 +39,7 @@ impl<T> AtomicMutex<T> {
     pub const fn new(inner: T) -> Self {
         Self {
             inner: UnsafeCell::new(inner),
-            status: AtomicUsize::new(0)
+            status: AtomicBool::new(false)
         }
     }
 
@@ -53,7 +53,7 @@ impl<T> AtomicMutex<T> {
     }
 
     pub fn try_lock(&self) -> Result<AtomicGuard<T>, ()> {
-        match self.status.compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed) {
+        match self.status.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed) {
             Ok(_) => Ok(AtomicGuard { mutex:  self }),
             Err(_) => Err(())
         }
