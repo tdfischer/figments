@@ -455,7 +455,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for 
     }
 }
 
-pub struct NullBufferPool<S: Surface>(NullSurface<S::Uniforms, S::CoordinateSpace, S::Pixel>);
+pub struct NullBufferPool<U, Space: CoordinateSpace, P: PixelFormat>(NullSurface<U, Space, P>);
 pub struct NullSurface<U, Space: CoordinateSpace, P: PixelFormat>(PhantomData<Space>, PhantomData<U>, PhantomData<P>);
 
 impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullSurface<U, Space, P> {
@@ -464,13 +464,13 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullSurface
     }
 }
 
-impl<S: Surface + Default> Default for NullBufferPool<S> where S::Uniforms: Default {
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullBufferPool<U, Space, P> {
     fn default() -> Self {
         Self(Default::default())
     }
 }
 
-impl<S: Surface> core::fmt::Debug for NullBufferPool<S> {
+impl<U, Space: CoordinateSpace, P: PixelFormat> core::fmt::Debug for NullBufferPool<U, Space, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("NullBufferPool").finish()
     }
