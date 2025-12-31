@@ -1,4 +1,4 @@
-use rgb::Rgb;
+use rgb::{Bgr, Grb, Rgb};
 use core::array;
 use core::ops::Index;
 
@@ -44,7 +44,19 @@ impl WithGamma for Rgb<u8> {
     }
 }
 
-impl<const SIZE: usize> WithGamma for [Rgb<u8>; SIZE] {
+impl WithGamma for Grb<u8> {
+    fn with_gamma(self, curve: &GammaCurve) -> Self {
+        Grb::new_grb(curve[self.g as usize], curve[self.r as usize], curve[self.b as usize])
+    }
+}
+
+impl WithGamma for Bgr<u8> {
+    fn with_gamma(self, curve: &GammaCurve) -> Self {
+        Bgr::new_bgr(curve[self.b as usize], curve[self.g as usize], curve[self.r as usize])
+    }
+}
+
+impl<T: WithGamma + Copy, const SIZE: usize> WithGamma for [T; SIZE] {
     fn with_gamma(self, curve: &GammaCurve) -> Self {
         array::from_fn(|x| { self[x].with_gamma(curve) })
     }

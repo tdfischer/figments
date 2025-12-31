@@ -1,20 +1,32 @@
-use rgb::Rgb;
+use rgb::{Grb, Rgb, Bgr};
 
 pub trait AsMilliwatts {
     fn as_milliwatts(&self) -> u32;
 }
 
-// Values are calculated base on the WS2812B chip
-impl AsMilliwatts for Rgb<u8> {
+impl<T: Copy> AsMilliwatts for Bgr<T> where Rgb<T>: AsMilliwatts {
+    fn as_milliwatts(&self) -> u32 {
+        Rgb::new(self.r, self.g, self.b).as_milliwatts()
+    }
+}
+
+impl<T: Copy> AsMilliwatts for Grb<T> where Rgb<T>: AsMilliwatts {
+    fn as_milliwatts(&self) -> u32 {
+        Rgb::new(self.r, self.g, self.b).as_milliwatts()
+    }
+}
+
+// FIXME: Values are calculated based on the WS2812B chip; the AsMilliwatts trait could probably be parameterized to support other 
+impl<T: Into<u32> + Copy> AsMilliwatts for Rgb<T> {
     fn as_milliwatts(&self) -> u32 {
         const RED_MW : u32   = 16 * 5; //< 16mA @ 5v = 80mW
         const GREEN_MW : u32 = 11 * 5; //< 11mA @ 5v = 55mW
         const BLUE_MW : u32  = 15 * 5; //< 15mA @ 5v = 75mW
         const DARK_MW : u32  =      5; //<  1mA @ 5v =  5mW
 
-        let red = (self.r as u32 * RED_MW).wrapping_shr(8);
-        let green = (self.g as u32 * GREEN_MW).wrapping_shr(8);
-        let blue = (self.b as u32 * BLUE_MW).wrapping_shr(8);
+        let red = (self.r.into() * RED_MW).wrapping_shr(8);
+        let green = (self.g.into() * GREEN_MW).wrapping_shr(8);
+        let blue = (self.b.into() * BLUE_MW).wrapping_shr(8);
 
         red + green + blue + DARK_MW
     }
