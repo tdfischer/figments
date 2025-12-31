@@ -80,7 +80,7 @@ pub struct PowerManagedWriter<T: SmartLedsWrite> {
     controls: PowerControls
 }
 
-impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelFormat + WithGamma + AsMilliwatts, T::Error: core::fmt::Debug {
+impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelBlend<Rgb<u8>> + PixelFormat + WithGamma, T::Error: core::fmt::Debug {
     pub fn new(target: T, max_mw: u32) -> Self {
         Self {
             target,
@@ -88,16 +88,15 @@ impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelFormat + With
         }
     }
 
-    pub fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T::Color: PixelBlend<Rgb<u8>> {
+    pub fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> {
         if self.controls.is_on {
-            let with_gamma = pixbuf.as_ref().iter().map(|pix| {
-                pix.with_gamma(&self.controls.gamma_curve)
-            });
-            let mw: u32 = with_gamma.clone().map(|pix| { pix.as_milliwatts() }).sum();
-            let b = brightness_for_mw(mw, self.controls.brightness, self.controls.max_mw);
+            let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
+            let b = brightness_for_mw(with_gamma.as_milliwatts(), self.controls.brightness, self.controls.max_mw);
+
+            // FIXME: Should be able to just replace this with a greyscale u8 value, which would let us drop PixelBlend<Rgb<u8>> from the trait
             let blend_color = Rgb::new(b, b, b);
-            let gamma_iter = with_gamma.map(|x| { x.multiply(blend_color)});
-            self.target.write(gamma_iter)
+            let iter = with_gamma.as_ref().iter().map(|x| { x.multiply(blend_color) });
+            self.target.write(iter)
         } else {
             self.target.write(pixbuf.as_ref().iter().map(|x| { x.multiply(Rgb::new(0, 0, 0)) }))
         }

@@ -21,7 +21,7 @@ pub trait Shader<Uniforms, Space: CoordinateSpace, Pixel: PixelFormat>: Send {
 }
 
 /// Types that can push pixels into samplers
-pub trait RenderSource<Uniforms, Space: CoordinateSpace, Src: PixelFormat, Dst: PixelSink<Src>> {
+pub trait RenderSource<Uniforms, Space: CoordinateSpace, Src: PixelFormat, Dst> {
     /// Draws this source's pixels into the sampler
     fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &Uniforms)
         where 

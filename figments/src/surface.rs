@@ -285,7 +285,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy> Su
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, HwPixel: Clone + 'static + PixelBlend<Pixel> + PixelSink<Pixel> + PixelSink<HwPixel>> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, HwPixel: PixelSrc<HwPixel> + 'static + PixelBlend<Pixel> + PixelSink<Pixel> + PixelSink<HwPixel>> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &U)
         where 
             S: Sample<'a, Space, Output = HwPixel> + ?Sized {
@@ -299,7 +299,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, Hw
                     for (virt_coords, output_pixel) in output.sample(rect) {
                         let adjusted = virt_coords + surface.offset;
                         let shader_pixel = shader.draw(&adjusted, uniforms);
-                        output_pixel.set(&output_pixel.clone().blend_pixel(shader_pixel, opacity));
+                        output_pixel.set(&output_pixel.get_pixel().blend_pixel(shader_pixel, opacity));
                     }
                 }
             }
@@ -505,7 +505,7 @@ impl<U, Space: CoordinateSpace, P: PixelFormat> Surface for NullSurface<U, Space
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {}
 }
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for NullBufferPool<NullSurface<U, Space, P>> {
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for NullBufferPool<U, Space, P> {
     type Surface = NullSurface<U, Space, P>;
 
     type Error = ();
@@ -515,7 +515,7 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
     }
 }
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> RenderSource<U, Space, P, P> for NullBufferPool<NullSurface<U, Space, P>> {
+impl<U: Default, Space: CoordinateSpace, P: PixelFormat> RenderSource<U, Space, P, P> for NullBufferPool<U, Space, P> {
     fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &U)
         where 
             Smp: Sample<'a, Space> + ?Sized,

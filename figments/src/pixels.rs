@@ -15,13 +15,23 @@ pub trait PixelBlend<OverlayPixel: PixelFormat> {
     fn multiply(self, overlay: OverlayPixel) -> Self;
 }
 
+pub trait PixelSrc<Output> {
+    fn get_pixel(&self) -> Output;
+}
+
 pub trait PixelSink<Src> {
     fn set(&mut self, pixel: &Src);
 }
 
-impl<Src> PixelSink<Src> for Src where Src: Copy {
+impl<Src> PixelSink<Src> for Src where Src: Clone {
     fn set(&mut self, pixel: &Src) {
-        *self = *pixel;
+        *self = pixel.clone();
+    }
+}
+
+impl<Output> PixelSrc<Output> for Output where Output: Clone {
+    fn get_pixel(&self) -> Output {
+        self.clone()
     }
 }
 
