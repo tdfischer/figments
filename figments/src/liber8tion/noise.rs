@@ -19,10 +19,12 @@ const NOISE_CUBE: [u8; 257] = [
 222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180,
 151];
 
+#[inline]
 const fn get_cube(x: u8) -> u8 {
     NOISE_CUBE[x as usize]
 }
 
+#[inline]
 fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
     let x = x_src.wrapping_shr(8) as u8;
     let y = y_src.wrapping_shr(8) as u8;
@@ -50,6 +52,7 @@ fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
     lerp7by8(x1, x2, v)
 }
 
+#[inline]
 pub fn inoise8(x: i16, y: i16) -> u8 {
     let mut n = inoise8_raw(x as u16, y as u16);
     n = n.wrapping_add(64);
