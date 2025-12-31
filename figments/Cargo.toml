@@ -18,7 +18,7 @@ name = "figments"
 [features]
 default = []
 std = ["ringbuf/std", "alloc"]
-alloc = ["dep:ringbuf", "ringbuf/alloc"]
+alloc = ["ringbuf/alloc"]
 embedded-graphics = ["dep:embedded-graphics"]
 
 [dependencies]
@@ -27,4 +27,7 @@ num = { version = "0.4", default-features = false }
 embedded-graphics = { version = "0.8", optional = true }
 
 # alloc
-ringbuf = { version = "0.4.7", optional = true, default_features = false }
+ringbuf = { version = "0.4.8", default_features = false, features = ["portable-atomic"] }
+spin = { version  = "0.10.0", features = ["portable-atomic", "fair_mutex"] }
+portable-atomic = { version = "1.11.1", features = ["critical-section"] }
+critical-section = "1.2.0"

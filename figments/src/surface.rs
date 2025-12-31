@@ -1,14 +1,14 @@
 use crate::prelude::*;
 
-use super::atomics::AtomicMutex;
-
+use spin::Mutex;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-
-use core::{marker::PhantomData, ops::DerefMut, sync::atomic::AtomicBool};
 use alloc::sync::Arc;
+
+use core::{marker::PhantomData, ops::DerefMut};
 use core::fmt::{Debug, Formatter};
-use ringbuf::{traits::*, HeapRb};
+use ringbuf::{StaticRb, traits::*};
+use portable_atomic::AtomicBool;
 
 use core::cell::RefCell;
 
@@ -43,6 +43,8 @@ struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     offset: Option<Coordinates<Space>>,
     slot: usize,
 }
+
+type UpdateRB<U, Space, Pixel> = StaticRb<SurfaceUpdate<U, Space, Pixel>, 32>;
 
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for SurfaceUpdate<U, Space, Pixel> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
@@ -159,14 +161,14 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for UpdateQueue<U, Spa
 }
 
 struct UpdateQueue<U, Space: CoordinateSpace, Pixel: PixelFormat> {
-    pending: AtomicMutex<HeapRb<SurfaceUpdate<U, Space, Pixel>>>,
+    pending: Mutex<UpdateRB<U, Space, Pixel>>,
     damaged: AtomicBool
 }
 
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for UpdateQueue<U, Space, Pixel> {
     fn default() -> Self {
         Self {
-            pending: AtomicMutex::new(HeapRb::new(128)),
+            pending: Mutex::new(Default::default()),
             damaged: AtomicBool::new(false)
         }
     }
@@ -174,7 +176,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for UpdateQueue<U, S
 
 impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel> {
     fn push(&self, update: SurfaceUpdate<U, Space, Pixel>) -> Result<(), SurfaceUpdate<U, Space, Pixel>> {
-        let mut locked = self.pending.lock().unwrap();
+        let mut locked = self.pending.lock();
         let mut existing_slot = None;
         for existing in locked.iter_mut() {
             if existing.slot == update.slot {
@@ -197,15 +199,16 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel>
         Ok(())
     }
 
-    fn try_take(&self) -> Option<HeapRb<SurfaceUpdate<U, Space, Pixel>>> {
-        if self.damaged.load(core::sync::atomic::Ordering::Relaxed) {
-            let mut updates = self.pending.lock().unwrap();
-            let next = HeapRb::new(updates.capacity().into());
-            self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
-            Some(core::mem::replace(updates.as_mut(), next))
-        } else {
-            None
-        }
+    fn try_take(&self) -> Option<UpdateRB<U, Space, Pixel>> {
+        critical_section::with(|_| {
+            if self.damaged.load(core::sync::atomic::Ordering::Acquire) {
+                let mut updates = self.pending.lock();
+                self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
+                Some(core::mem::take(updates.as_mut()))
+            } else {
+                None
+            } 
+        })
     }
 }
 

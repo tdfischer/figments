@@ -12,5 +12,3 @@ pub mod prelude;
 pub mod surface;
 #[cfg(feature="alloc")]
 extern crate alloc;
-#[cfg(feature="alloc")]
-mod atomics;
