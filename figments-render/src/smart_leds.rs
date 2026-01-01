@@ -5,7 +5,7 @@ use core::iter::Iterator;
 
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
 
-use figments::prelude::*;
+use figments::{liber8tion::interpolate::Fract8, prelude::*};
 
 use crate::{gamma::{WithGamma, GammaCurve}, output::{Brightness, GammaCorrected}, power::*};
 
@@ -48,18 +48,15 @@ pub struct PowerManagedWriterAsync<T: SmartLedsWriteAsync> {
     controls: PowerControls
 }
 
-impl<T: SmartLedsWriteAsync> PowerManagedWriterAsync<T> where T::Color: PixelBlend<Rgb<u8>> + PixelFormat + WithGamma, T::Error: core::fmt::Debug {
+impl<T: SmartLedsWriteAsync> PowerManagedWriterAsync<T> where T::Color: PixelBlend<Fract8> + PixelFormat + WithGamma, T::Error: core::fmt::Debug {
     pub async fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> {
         if self.controls.is_on {
             let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
             let b = brightness_for_mw(with_gamma.as_milliwatts(), self.controls.brightness, self.controls.max_mw);
-
-            // FIXME: Should be able to just replace this with a greyscale u8 value, which would let us drop PixelBlend<Rgb<u8>> from the trait
-            let blend_color = Rgb::new(b, b, b);
-            let iter = with_gamma.as_ref().iter().map(|x| { x.multiply(blend_color) });
+            let iter = with_gamma.as_ref().iter().map(|x| { x.multiply(b) });
             self.target.write(iter).await
         } else {
-            self.target.write(pixbuf.as_ref().iter().map(|x| { x.multiply(Rgb::new(0, 0, 0)) })).await
+            self.target.write(pixbuf.as_ref().iter().map(|x| { x.multiply(0) })).await
         }
     }
 
@@ -80,7 +77,7 @@ pub struct PowerManagedWriter<T: SmartLedsWrite> {
     controls: PowerControls
 }
 
-impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelBlend<Rgb<u8>> + PixelFormat + WithGamma, T::Error: core::fmt::Debug {
+impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelBlend<Fract8> + PixelFormat + WithGamma, T::Error: core::fmt::Debug {
     pub fn new(target: T, max_mw: u32) -> Self {
         Self {
             target,
@@ -92,13 +89,10 @@ impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: PixelBlend<Rgb<u8>
         if self.controls.is_on {
             let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
             let b = brightness_for_mw(with_gamma.as_milliwatts(), self.controls.brightness, self.controls.max_mw);
-
-            // FIXME: Should be able to just replace this with a greyscale u8 value, which would let us drop PixelBlend<Rgb<u8>> from the trait
-            let blend_color = Rgb::new(b, b, b);
-            let iter = with_gamma.as_ref().iter().map(|x| { x.multiply(blend_color) });
+            let iter = with_gamma.as_ref().iter().map(|x| { x.multiply(b) });
             self.target.write(iter)
         } else {
-            self.target.write(pixbuf.as_ref().iter().map(|x| { x.multiply(Rgb::new(0, 0, 0)) }))
+            self.target.write(pixbuf.as_ref().iter().map(|x| { x.multiply(0) }))
         }
     }
 

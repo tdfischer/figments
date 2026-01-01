@@ -12,19 +12,19 @@ esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3"]
 esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-hal-smartled/esp32s3"]
 
 [dependencies]
-esp-backtrace = { version = "0.15", features = [
-    "exception-handler",
+esp-backtrace = { version = "0.18", features = [
     "panic-handler",
     "println",
 ]}
 
-esp-hal = { version = "1.0.0-beta.0", features = [
-    "unstable",
+esp-hal = { version = "1.0.0", features = [
+  "log-04",
+  "unstable",
 ] }
-esp-hal-smartled = { git = "https://github.com/esp-rs/esp-hal-community.git" }
-esp-println = { version = "0.13", features = ["log"] }
+esp-hal-smartled = { version = "0.17" }
+esp-println = { version = "0.16", features = ["log-04"] }
 log = { version = "0.4.26" }
 smart-leds = "0.4.0"
-figments = { path = "../figments" }
-figments-render = { path = "../figments-render" }
-rgb = "0.8.50"
+figments = { path = "../figments", features = ["log-04"] }
+figments-render = { path = "../figments-render", features = ["log-04"] }
+rgb = "0.8"

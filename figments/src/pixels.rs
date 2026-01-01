@@ -1,4 +1,4 @@
-use rgb::{Rgb, Rgba};
+use rgb::{Grb, Rgb, Rgba};
 
 use crate::{liber8tion::interpolate::Fract8, prelude::Fract8Ops};
 
@@ -7,7 +7,7 @@ pub trait PixelFormat: PixelBlend<Self> + Send + Copy + Default {}
 impl<T> PixelFormat for T where T: PixelBlend<Self> + Send + Copy + Default {}
 
 /// Types that can blend the value of another pixel
-pub trait PixelBlend<OverlayPixel: PixelFormat> {
+pub trait PixelBlend<OverlayPixel> {
     /// Blend a given pixel as an overlay by a given percentage
     fn blend_pixel(self, overlay: OverlayPixel, opacity: Fract8) -> Self;
 
@@ -38,6 +38,48 @@ impl<Output> PixelSrc<Output> for Output where Output: Clone {
 impl PixelSink<Rgba<u8>> for Rgb<u8> {
     fn set(&mut self, pixel: &Rgba<u8>) {
         *self = pixel.rgb()
+    }
+}
+
+impl PixelBlend<Fract8> for Grb<u8> {
+    fn blend_pixel(self, overlay: Fract8, opacity: Fract8) -> Self {
+        self.blend8(Grb::new_grb(overlay, overlay, overlay), opacity)
+    }
+
+    fn multiply(self, overlay: Fract8) -> Self {
+        Self::new_grb(
+            self.g.scale8(overlay),
+            self.r.scale8(overlay),
+            self.b.scale8(overlay)
+        )
+    }
+}
+
+impl PixelBlend<Grb<u8>> for Grb<u8> {
+    fn blend_pixel(self, overlay: Grb<u8>, opacity: Fract8) -> Self {
+        self.blend8(overlay, opacity)
+    }
+
+    fn multiply(self, overlay: Grb<u8>) -> Self {
+        Self::new_grb(
+            self.g.scale8(overlay.g),
+            self.r.scale8(overlay.r),
+            self.b.scale8(overlay.b)
+        )
+    }
+}
+
+impl PixelBlend<Rgb<u8>> for Grb<u8> {
+    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
+        self.blend8(overlay.into(), opacity)
+    }
+    
+    fn multiply(self, overlay: Rgb<u8>) -> Self {
+        Self::new_grb(
+            self.g.scale8(overlay.g),
+            self.r.scale8(overlay.r),
+            self.b.scale8(overlay.b)
+        )
     }
 }
 

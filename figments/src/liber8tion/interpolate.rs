@@ -1,6 +1,6 @@
 use core::ops::BitOr;
 
-use rgb::{Rgb, Rgba};
+use rgb::{Grb, Rgb, Rgba};
 
 pub type Fract8 = u8;
 
@@ -145,6 +145,36 @@ impl Fract8Ops for Rgba<u8> {
             self.g.lerp8by8(other.g, scale),
             self.b.lerp8by8(other.b, scale),
             self.a.lerp8by8(other.a, scale)
+        )
+    }
+}
+
+impl Fract8Ops for Grb<u8> where {
+    fn scale8(self, scale: Fract8) -> Self {
+        Grb::new_grb(
+            self.g.scale8(scale),
+            self.r.scale8(scale),
+            self.b.scale8(scale)
+        )
+    }
+
+    fn blend8(self, other: Self, scale: Fract8) -> Self {
+        Rgb::new(self.r, self.g, self.b).blend8(other.into(), scale).into()
+    }
+
+    fn saturating_add(self, other: Self) -> Self {
+        Grb::new_grb(
+            self.g.saturating_add(other.g),
+            self.r.saturating_add(other.r),
+            self.b.saturating_add(other.b)
+        )
+    }
+
+    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+        Grb::new_grb(
+            self.g.lerp8by8(other.g, scale),
+            self.r.lerp8by8(other.r, scale),
+            self.b.lerp8by8(other.b, scale)
         )
     }
 }
