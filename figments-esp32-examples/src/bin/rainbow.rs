@@ -7,7 +7,7 @@ use log::info;
 use rgb::{Grb,Rgb};
 use figments::prelude::*;
 use figments::liber8tion::trig::sin8;
-use figments_render::smart_leds::PowerManagedWriter;
+use figments_render::{power::AsMilliwatts, smart_leds::PowerManagedWriter};
 use core::num::Wrapping;
 
 use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
@@ -20,6 +20,8 @@ use smart_leds::{
 #[main]
 fn main() -> ! {
     let p = esp_hal::init(esp_hal::Config::default());
+
+    esp_println::logger::init_logger_from_env();
 
     // Change this number to use a different number of LEDs
     const NUM_LEDS: usize = 50;
@@ -40,8 +42,8 @@ fn main() -> ! {
 
     // Construct the actual smart-leds output
     let mut pixbuf = [Default::default(); NUM_LEDS];
-    let rmt_buffer = smart_led_buffer!(NUM_LEDS);
-    let mut target = SmartLedsAdapter::new(rmt_channel, p.GPIO5, rmt_buffer);
+    let mut rmt_buffer = smart_led_buffer!(NUM_LEDS);
+    let mut target = SmartLedsAdapter::new(rmt_channel, p.GPIO5, &mut rmt_buffer);
 
     // Stick a power management API on top of it
     let mut writer = PowerManagedWriter::new(target, MAX_POWER_MW);
@@ -56,7 +58,7 @@ fn main() -> ! {
 
         // Render the frame to the pixbuf
         for (coords, pix) in pixbuf.sample(&Rectangle::everything()) {
-            *pix = Grb::new_grb(
+            *pix = Rgb::new(
                 sin8(coords.x.wrapping_mul(3).wrapping_add(frame.0)).wrapping_add(coords.x as u8),
                 sin8(coords.x.wrapping_mul(5).wrapping_sub(frame.0)).wrapping_add(coords.x as u8),
                 sin8(coords.x.wrapping_mul(2).wrapping_add(frame.0)).wrapping_add(coords.x as u8)

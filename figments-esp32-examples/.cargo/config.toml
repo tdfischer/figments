@@ -11,14 +11,10 @@ rustflags = [
   # GNU LD
   "-C", "link-arg=-Wl,-Tlinkall.x",
   "-C", "link-arg=-nostartfiles",
-
-  # LLD
-  # "-C", "link-arg=-Tlinkall.x",
-  # "-C", "linker=rust-lld",
 ]
 
 [build]
-target = "riscv32imc-unknown-none-elf"
+target = "xtensa-esp32s3-none-elf"
 
 [unstable]
 build-std = ["core"]
