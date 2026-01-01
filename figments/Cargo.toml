@@ -20,11 +20,14 @@ default = []
 std = ["ringbuf/std", "alloc"]
 alloc = ["ringbuf/alloc"]
 embedded-graphics = ["dep:embedded-graphics"]
+log-04 = ["dep:log"]
 
 [dependencies]
 rgb = "0.8"
 num = { version = "0.4", default-features = false }
 embedded-graphics = { version = "0.8", optional = true }
+
+log = { version = "0.4", optional = true }
 
 # alloc
 ringbuf = { version = "0.4.8", default_features = false, features = ["portable-atomic"] }
