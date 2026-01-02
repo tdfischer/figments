@@ -1,0 +1,18 @@
+[package]
+name = "figments-sample-shaders"
+version = "0.1.0"
+authors = ["tdfischer"]
+edition = "2021"
+license = "LGPL-2.1-or-later"
+
+[lib]
+name = "figments_sample_shaders"
+
+[features]
+default = ["micromath"]
+micromath = ["dep:micromath"]
+
+[dependencies]
+figments = { path = "../figments", version = "0.0.3", features = ["log-04", "alloc"] }
+rgb = "0.8"
+micromath = { version = "2.1", optional = true }
