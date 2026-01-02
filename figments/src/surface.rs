@@ -12,7 +12,7 @@ use portable_atomic::AtomicBool;
 
 use core::cell::RefCell;
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderBinding<U, Space, Pixel> where Rectangle<Space>: Debug {
+impl<U, Space: CoordinateSpace, Pixel> Debug for ShaderBinding<U, Space, Pixel> where Rectangle<Space>: Debug {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ShaderBinding")
             .field("rect", &self.rect)
@@ -26,7 +26,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderBinding<U, S
     }
 }
 
-struct ShaderBinding<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+struct ShaderBinding<U, Space: CoordinateSpace, Pixel> {
     shader: Option<Box<dyn Shader<U, Space, Pixel>>>,
     rect: Rectangle<Space>,
     opacity: u8,
@@ -34,7 +34,7 @@ struct ShaderBinding<U, Space: CoordinateSpace, Pixel: PixelFormat> {
     offset: Coordinates<Space>
 }
 
-struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel> {
     #[allow(clippy::type_complexity)]
     shader: Option<Option<Box<dyn Shader<U, Space, Pixel>>>>,
     rect: Option<Rectangle<Space>>,
@@ -46,7 +46,7 @@ struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel: PixelFormat> {
 
 type UpdateRB<U, Space, Pixel> = StaticRb<SurfaceUpdate<U, Space, Pixel>, 32>;
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for SurfaceUpdate<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Debug for SurfaceUpdate<U, Space, Pixel> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("SurfaceUpdate")
             .field("slot", &self.slot)
@@ -54,7 +54,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for SurfaceUpdate<U, S
     }
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> SurfaceUpdate<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> SurfaceUpdate<U, Space, Pixel> {
     fn merge(&mut self, mut other: Self) {
         if other.shader.is_some() {
             self.shader = other.shader.take()
@@ -74,7 +74,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> SurfaceUpdate<U, Space, Pixe
     }
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for SurfaceUpdate<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Default for SurfaceUpdate<U, Space, Pixel> {
     fn default() -> Self {
         SurfaceUpdate {
             shader: None,
@@ -88,19 +88,19 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for SurfaceUpdate<U,
 }
 
 /// A thread-safe [Surface] implementation where changes are buffered before they are committed in batches
-pub struct BufferedSurface<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+pub struct BufferedSurface<U, Space: CoordinateSpace, Pixel> {
     updater: Arc<UpdateQueue<U, Space, Pixel>>,
     slot: usize
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for BufferedSurface<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Debug for BufferedSurface<U, Space, Pixel> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BufferedSurface").field("updater", &self.updater).field("slot", &self.slot).finish()
     }
 }
 
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Surface for BufferedSurface<U, Space, Pixel> {
     type Uniforms = U;
     type CoordinateSpace = Space;
     type Pixel = Pixel;
@@ -154,18 +154,18 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Surface for BufferedSurface<
     }
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for UpdateQueue<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Debug for UpdateQueue<U, Space, Pixel> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("UpdateQueue").finish()
     }
 }
 
-struct UpdateQueue<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+struct UpdateQueue<U, Space: CoordinateSpace, Pixel> {
     pending: Mutex<UpdateRB<U, Space, Pixel>>,
     damaged: AtomicBool
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for UpdateQueue<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> Default for UpdateQueue<U, Space, Pixel> {
     fn default() -> Self {
         Self {
             pending: Mutex::new(Default::default()),
@@ -174,7 +174,7 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Default for UpdateQueue<U, S
     }
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel> {
+impl<U, Space: CoordinateSpace, Pixel> UpdateQueue<U, Space, Pixel> {
     fn push(&self, update: SurfaceUpdate<U, Space, Pixel>) -> Result<(), SurfaceUpdate<U, Space, Pixel>> {
         let mut locked = self.pending.lock();
         let mut existing_slot = None;
@@ -213,18 +213,18 @@ impl<U, Space: CoordinateSpace, Pixel: PixelFormat> UpdateQueue<U, Space, Pixel>
 }
 
 #[derive(Default)]
-struct ShaderChain<U, Space: CoordinateSpace, Pixel: PixelFormat> {
+struct ShaderChain<U, Space: CoordinateSpace, Pixel> {
     bindings: Vec<ShaderBinding<U, Space, Pixel>>,
     updates: Arc<UpdateQueue<U, Space, Pixel>>
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Debug for ShaderChain<U, Space, Pixel> where Space: Debug, Space::Data: Debug {
+impl<U, Space: CoordinateSpace, Pixel> Debug for ShaderChain<U, Space, Pixel> where Space: Debug, Space::Data: Debug {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ShaderChain").field("bindings", &self.bindings).field("updates", &self.updates).finish()
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel> ShaderChain<U, Space, Pixel> {
     pub fn commit(&mut self) {
         if let Some(mut queue) = self.updates.try_take() {
             for update in queue.iter_mut() {
@@ -264,34 +264,31 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> ShaderChain<U, Spac
 
 /// A thread-safe [Surfaces] implementation where changes are buffered before they are committed in batches
 #[derive(Default)]
-pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel: PixelFormat> {
-    pool: RefCell<ShaderChain<U, Space, Pixel>>
+pub struct BufferedSurfacePool<U, Space: CoordinateSpace, Pixel> {
+    pool: ShaderChain<U, Space, Pixel>
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat> BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel> BufferedSurfacePool<U, Space, Pixel> {
     /// Commits the queue of pending surface changes
-    pub fn commit(&self) {
-        let mut b = self.pool.borrow_mut();
-        b.commit();
+    pub fn commit(&mut self) {
+        self.pool.commit();
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: Copy + Fract8Ops + 'static + Copy> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
     type Error = ();
     type Surface = BufferedSurface<U, Space, Pixel>;
     
     fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error> {
-        self.pool.borrow_mut().new_surface(area)
+        self.pool.new_surface(area)
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, HwPixel: PixelSrc<HwPixel> + 'static + PixelBlend<Pixel> + PixelSink<Pixel> + PixelSink<HwPixel>> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: 'static, HwPixel: AdditivePixelSink<Pixel> + 'static> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &U)
         where 
             S: Sample<'a, Space, Output = HwPixel> + ?Sized {
-        let mut b = self.pool.borrow_mut();
-        b.commit();
-        for surface in &b.bindings {
+        for surface in &self.pool.bindings {
             let opacity = surface.opacity;
             if opacity > 0 && surface.visible {
                 if let Some(ref shader) = surface.shader {
@@ -299,7 +296,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, Hw
                     for (virt_coords, output_pixel) in output.sample(rect) {
                         let adjusted = virt_coords + surface.offset;
                         let shader_pixel = shader.draw(&adjusted, uniforms);
-                        output_pixel.set(&output_pixel.get_pixel().blend_pixel(shader_pixel, opacity));
+                        output_pixel.add(shader_pixel, opacity);
                     }
                 }
             }
@@ -308,7 +305,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: PixelFormat + 'static + Copy, Hw
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces<Space: CoordinateSpace>: RenderSource<<Self::Surface as Surface>::Uniforms, Space, <Self::Surface as Surface>::Pixel, <Self::Surface as Surface>::Pixel> {
+pub trait Surfaces<Space: CoordinateSpace>/* : RenderSource<<Self::Surface as Surface>::Uniforms, Space, <Self::Surface as Surface>::Pixel, <Self::Surface as Surface>::Pixel>*/ {
     /// The underlying surface type created by this backend
     type Surface: Surface<CoordinateSpace = Space>;
 
@@ -320,7 +317,7 @@ pub trait Surfaces<Space: CoordinateSpace>: RenderSource<<Self::Surface as Surfa
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel: PixelFormat> {
+pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
@@ -328,7 +325,7 @@ pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfa
     visible: Option<bool>
 }
 
-impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel: PixelFormat> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
+impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -399,7 +396,7 @@ pub trait Surface {
     type CoordinateSpace: CoordinateSpace;
 
     /// The format of the pixels produced by this shader
-    type Pixel: PixelFormat;
+    type Pixel;
 
     /// Sets the shader for this surface
     fn set_shader<T: Shader<Self::Uniforms, Self::CoordinateSpace, Self::Pixel> + 'static>(&mut self, shader: T);
@@ -452,40 +449,40 @@ impl<T: DerefMut<Target = S>, S: Surface> Surface for [T] {
     }
 }
 
-impl<U, Space: CoordinateSpace, Pixel: PixelFormat> Shader<U, Space, Pixel> for Box<dyn Shader<U, Space, Pixel>> {
+impl<U, Space: CoordinateSpace, Pixel> Shader<U, Space, Pixel> for Box<dyn Shader<U, Space, Pixel>> {
     fn draw(&self, surface_coords: &Coordinates<Space>, uniforms: &U) -> Pixel {
         self.as_ref().draw(surface_coords, uniforms)
     }
 }
 
-pub struct NullBufferPool<U, Space: CoordinateSpace, P: PixelFormat>(NullSurface<U, Space, P>);
-pub struct NullSurface<U, Space: CoordinateSpace, P: PixelFormat>(PhantomData<Space>, PhantomData<U>, PhantomData<P>);
+pub struct NullBufferPool<U, Space: CoordinateSpace, P>(NullSurface<U, Space, P>);
+pub struct NullSurface<U, Space: CoordinateSpace, P>(PhantomData<Space>, PhantomData<U>, PhantomData<P>);
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullSurface<U, Space, P> {
+impl<U: Default, Space: CoordinateSpace, P> Default for NullSurface<U, Space, P> {
     fn default() -> Self {
         Self(Default::default(), Default::default(), Default::default())
     }
 }
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Default for NullBufferPool<U, Space, P> {
+impl<U: Default, Space: CoordinateSpace, P> Default for NullBufferPool<U, Space, P> {
     fn default() -> Self {
         Self(Default::default())
     }
 }
 
-impl<U, Space: CoordinateSpace, P: PixelFormat> core::fmt::Debug for NullBufferPool<U, Space, P> {
+impl<U, Space: CoordinateSpace, P> core::fmt::Debug for NullBufferPool<U, Space, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("NullBufferPool").finish()
     }
 }
 
-impl<U: Default + core::fmt::Debug, Space: CoordinateSpace, P: PixelFormat> core::fmt::Debug for NullSurface<U, Space, P> {
+impl<U: Default + core::fmt::Debug, Space: CoordinateSpace, P> core::fmt::Debug for NullSurface<U, Space, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("NullSurface").finish()
     }
 }
 
-impl<U, Space: CoordinateSpace, P: PixelFormat> Surface for NullSurface<U, Space, P> {
+impl<U, Space: CoordinateSpace, P> Surface for NullSurface<U, Space, P> {
     type Uniforms = U;
 
     type CoordinateSpace = Space;
@@ -505,7 +502,7 @@ impl<U, Space: CoordinateSpace, P: PixelFormat> Surface for NullSurface<U, Space
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {}
 }
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for NullBufferPool<U, Space, P> {
+impl<U: Default, Space: CoordinateSpace, P> Surfaces<Space> for NullBufferPool<U, Space, P> {
     type Surface = NullSurface<U, Space, P>;
 
     type Error = ();
@@ -515,11 +512,10 @@ impl<U: Default, Space: CoordinateSpace, P: PixelFormat> Surfaces<Space> for Nul
     }
 }
 
-impl<U: Default, Space: CoordinateSpace, P: PixelFormat> RenderSource<U, Space, P, P> for NullBufferPool<U, Space, P> {
+impl<U: Default, Space: CoordinateSpace, P> RenderSource<U, Space, P, P> for NullBufferPool<U, Space, P> {
     fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &U)
         where 
-            Smp: Sample<'a, Space> + ?Sized,
-            Smp::Output: PixelSink<P> {}
+            Smp: Sample<'a, Space> + ?Sized {}
 }
 
 #[cfg(test)]

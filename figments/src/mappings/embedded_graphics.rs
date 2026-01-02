@@ -18,7 +18,7 @@ impl<'a, T> Dimensions for EmbeddedGraphicsSampler<'a, T> {
     }
 }
 
-impl<'a, T> DrawTarget for EmbeddedGraphicsSampler<'a, T> where T: Sample<'a, Matrix2DSpace>, T::Output: PixelSink<BinaryColor> {
+impl<'a, T> DrawTarget for EmbeddedGraphicsSampler<'a, T> where T: Sample<'a, Matrix2DSpace>, T::Output: AdditivePixelSink<BinaryColor> {
     type Color = BinaryColor;
 
     type Error = ();
@@ -29,7 +29,7 @@ impl<'a, T> DrawTarget for EmbeddedGraphicsSampler<'a, T> where T: Sample<'a, Ma
         for pix in pixels {
             let rect = Rectangle::new(Coordinates::new(pix.0.x, pix.0.y), Coordinates::new(pix.0.x, pix.0.y));
             for (coords, fpix) in self.0.sample(&rect) {
-                fpix.set(&pix.1);
+                fpix.add(pix.1, 255);
             }
         }
 

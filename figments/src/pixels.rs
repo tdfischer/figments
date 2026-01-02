@@ -23,6 +23,35 @@ pub trait PixelSink<Src> {
     fn set(&mut self, pixel: &Src);
 }
 
+pub trait AdditivePixelSink<Src> {
+    fn add(&mut self, pixel: Src, opacity: Fract8);
+}
+
+/*impl<T: Copy + Fract8Ops + From<X>, X> AdditivePixelSink<X> for T {
+    #[inline]
+    fn add(&mut self, pixel: X, opacity: Fract8) {
+        *self = self.blend8(From::from(pixel), opacity);
+    }
+}*/
+
+impl AdditivePixelSink<Rgb<u8>> for Grb<u8> {
+    #[inline(always)]
+    fn add(&mut self, pixel: Rgb<u8>, opacity: Fract8) {
+        match opacity {
+            0 => (),
+            255 => *self = pixel.into(),
+            _ => *self = self.blend8(pixel.into(), opacity)
+        }
+    }
+}
+
+impl AdditivePixelSink<Rgba<u8>> for Rgb<u8> {
+    #[inline(always)]
+    fn add(&mut self, pixel: Rgba<u8>, opacity: Fract8) {
+        *self = self.blend8(Self::new(pixel.r, pixel.g, pixel.b), pixel.a.scale8(opacity))
+    }
+}
+
 impl<Src> PixelSink<Src> for Src where Src: Clone {
     fn set(&mut self, pixel: &Src) {
         *self = pixel.clone();
@@ -41,102 +70,9 @@ impl PixelSink<Rgba<u8>> for Rgb<u8> {
     }
 }
 
-impl PixelBlend<Fract8> for Grb<u8> {
-    fn blend_pixel(self, overlay: Fract8, opacity: Fract8) -> Self {
-        self.blend8(Grb::new_grb(overlay, overlay, overlay), opacity)
-    }
-
-    fn multiply(self, overlay: Fract8) -> Self {
-        Self::new_grb(
-            self.g.scale8(overlay),
-            self.r.scale8(overlay),
-            self.b.scale8(overlay)
-        )
-    }
-}
-
-impl PixelBlend<Grb<u8>> for Grb<u8> {
-    fn blend_pixel(self, overlay: Grb<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay, opacity)
-    }
-
-    fn multiply(self, overlay: Grb<u8>) -> Self {
-        Self::new_grb(
-            self.g.scale8(overlay.g),
-            self.r.scale8(overlay.r),
-            self.b.scale8(overlay.b)
-        )
-    }
-}
-
-impl PixelBlend<Rgb<u8>> for Grb<u8> {
-    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay.into(), opacity)
-    }
-    
-    fn multiply(self, overlay: Rgb<u8>) -> Self {
-        Self::new_grb(
-            self.g.scale8(overlay.g),
-            self.r.scale8(overlay.r),
-            self.b.scale8(overlay.b)
-        )
-    }
-}
-
-impl PixelBlend<Rgb<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgb<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay, opacity)
-    }
-    
-    fn multiply(self, overlay: Rgb<u8>) -> Self {
-        Self::new(
-            self.r.scale8(overlay.r),
-            self.g.scale8(overlay.g),
-            self.b.scale8(overlay.b),
-        )
-    }
-}
-
-impl PixelBlend<Rgba<u8>> for Rgba<u8> {
-    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
-        self.blend8(overlay, opacity)
-    }
-    
-    fn multiply(self, overlay: Rgba<u8>) -> Self {
-        Self::new(
-            self.r.scale8(overlay.r),
-            self.g.scale8(overlay.g),
-            self.b.scale8(overlay.b),
-            self.a.scale8(overlay.a)
-        )
-    }
-}
-
-impl PixelBlend<Rgba<u8>> for Rgb<u8> {
-    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
-        self.blend8(Rgb::new(overlay.r, overlay.g, overlay.b), overlay.a.scale8(opacity))
-    }
-    
-    fn multiply(self, overlay: Rgba<u8>) -> Self {
-        Self::new(
-            self.r.scale8(overlay.r),
-            self.g.scale8(overlay.g),
-            self.b.scale8(overlay.b),
-        )
-    }
-}
-
-impl PixelBlend<Rgba<u8>> for bool {
-    fn blend_pixel(self, overlay: Rgba<u8>, opacity: Fract8) -> Self {
-        if opacity >= 128 {
-            (overlay.r as u32 + overlay.g as u32 + overlay.b as u32) >= 128
-        } else {
-            self
-        }
-    }
-    
-    fn multiply(self, overlay: Rgba<u8>) -> Self {
-        overlay.iter().map(|x| { x as u16 }).sum::<u16>() / 4 >= 128
+impl PixelSink<Rgb<u8>> for Grb<u8> {
+    fn set(&mut self, pixel: &Rgb<u8>) {
+        *self = pixel.clone().into()
     }
 }
 

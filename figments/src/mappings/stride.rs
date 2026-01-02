@@ -3,7 +3,6 @@ use core::ops::IndexMut;
 
 use crate::geometry::*;
 use crate::liber8tion::interpolate::scale8;
-use crate::pixels::PixelFormat;
 use crate::render::Sample;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
@@ -104,14 +103,14 @@ pub type StrideCoords = Coordinates<StrideSpace>;
 
 /// A [CoordinateView] that maps [Virtual] coordinates to stride based coordinates
 #[derive(Debug)]
-pub struct StrideView<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> {
+pub struct StrideView<'a, P, PB: IndexMut<usize, Output = P>> {
     map: &'a StrideMapping,
     range: Rectangle<StrideSpace>,
     cur: StrideCoords,
     pixbuf: &'a mut PB,
 }
 
-impl<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
+impl<'a, P, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
 
     /// Returns the actual range of physical pixels that are selected for iteration
     pub fn range(&self) -> Rectangle<StrideSpace> {
@@ -148,7 +147,7 @@ impl<'a, P: PixelFormat, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> 
     }
 }
 
-impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, PB> {
+impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, PB> {
     type Item = (VirtualCoordinates, &'a mut P);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -203,12 +202,12 @@ impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Iterator for Stri
     }
 }
 
-struct StrideSampler<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> {
+struct StrideSampler<'a, P: 'a, PB: IndexMut<usize, Output = P>> {
     map: &'a StrideMapping,
     pixbuf: &'a mut PB
 }
 
-impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P, PB> {
+impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P, PB> {
     pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping) -> Self {
         Self {
             pixbuf,
@@ -217,7 +216,7 @@ impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> StrideSampler<'a,
     }
 }
 
-impl<'a, P: PixelFormat + 'a, PB: IndexMut<usize, Output = P>> Sample<'a, Virtual> for StrideSampler<'a, P, PB> {
+impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> Sample<'a, Virtual> for StrideSampler<'a, P, PB> {
     type Output = P;
 
     fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Output)> {

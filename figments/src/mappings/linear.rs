@@ -12,7 +12,27 @@ impl CoordinateSpace for LinearSpace {
     type Data = usize;
 }
 
-impl<'a, Pixel: PixelFormat + 'a> Sample<'a, LinearSpace> for [Pixel] {
+impl<'a, Pixel: 'a> Sample<'a, LinearSpace> for [Pixel] {
+    type Output = Pixel;
+
+    fn sample(&mut self, rect: &Rectangle<LinearSpace>) -> impl Iterator<Item = (Coordinates<LinearSpace>, &'a mut Self::Output)> {
+        let size = self.len();
+        // Clip the pixbuf at the left side of the rectangle
+        let (_, rest) = self.split_at_mut(min(rect.left(), size));
+        // Clip again on the other end of the rectangle
+        let (subset, _) = rest.split_at_mut(min(rect.width(), rest.len()));
+        // Trick the borrow checker, until we can rewrite the sample trait to use a lifetime generic parameter
+        let bufref = unsafe {
+            (subset as *mut [Pixel]).as_mut().unwrap()
+        };
+        // Enumerate each pixel into an absolute (x, 0) coordinate along with the sampled pixel
+        bufref.iter_mut().enumerate().map(|(idx, pix)| {
+            (Coordinates::new(idx + rect.left(), 0), pix)
+        })
+    }
+}
+
+impl<'a, Pixel: 'a, const N: usize> Sample<'a, LinearSpace> for [Pixel; N] {
     type Output = Pixel;
 
     fn sample(&mut self, rect: &Rectangle<LinearSpace>) -> impl Iterator<Item = (Coordinates<LinearSpace>, &'a mut Self::Output)> {
