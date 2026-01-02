@@ -27,6 +27,16 @@ impl Trig8 for usize {
     }
 }
 
+impl Trig8 for i32 {
+    fn sin8(self) -> u8 {
+        ((self % 255) as u8).sin8()
+    }
+
+    fn cos8(self) -> u8 {
+        ((self % 255) as u8).cos8()
+    }
+}
+
 pub fn sin8<T: Trig8>(theta: T) -> u8 {
     theta.sin8()
 }
