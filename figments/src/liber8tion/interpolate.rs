@@ -1,8 +1,49 @@
 use core::ops::BitOr;
 
-use rgb::{Grb, Rgb, Rgba};
+use rgb::*;
 
 pub type Fract8 = u8;
+
+macro_rules! fract8_color_impl {
+    ($color_type:tt $($component:ident),+) => {
+        impl<T> Fract8Ops for $color_type<T> where T: Fract8Ops {
+            #[inline(always)]
+            fn scale8(self, scale: Fract8) -> Self {
+                Self {
+                    $($component: self.$component.scale8(scale)),*
+                }
+            }
+
+            #[inline(always)]
+            fn blend8(self, other: Self, scale: Fract8) -> Self {
+                Self {
+                    $($component: self.$component.blend8(other.$component, scale)),*
+                }
+            }
+
+            #[inline(always)]
+            fn saturating_add(self, other: Self) -> Self {
+                Self {
+                    $($component: self.$component.saturating_add(other.$component)),*
+                }
+            }
+
+            #[inline(always)]
+            fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
+                Self {
+                    $($component: self.$component.lerp8by8(other.$component, scale)),*
+                }
+            }
+        }
+    };
+}
+
+fract8_color_impl!(Rgb r,g,b);
+fract8_color_impl!(Grb g,r,b);
+fract8_color_impl!(Bgr b,g,r);
+fract8_color_impl!(Rgba r,g,b,a);
+fract8_color_impl!(Bgra r,g,b,a);
+fract8_color_impl!(GrayA a,v);
 
 pub trait Fract8Ops {
     fn scale8(self, scale: Fract8) -> Self;
@@ -39,12 +80,12 @@ impl Fract8Ops for bool {
 }
 
 impl Fract8Ops for u8 {
-    #[inline]
+    #[inline(always)]
     fn scale8(self, scale: Fract8) -> Self {
         (self as f32 * (scale as f32 / 255f32)) as u8
     }
 
-    #[inline]
+    #[inline(always)]
     fn blend8(self, other: Self, scale: Fract8) -> Self {
         match scale {
             0 => self,
@@ -53,11 +94,12 @@ impl Fract8Ops for u8 {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn saturating_add(self, other: Self) -> Self {
         self.saturating_add(other)
     }
     
+    #[inline(always)]
     fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
         if other > self {
             let delta = other - self;
@@ -100,130 +142,31 @@ impl Fract8Ops for usize {
     }
 }
 
+#[cfg(feature="embedded-graphics")]
+mod embedded_impl {
+    use embedded_graphics::pixelcolor::BinaryColor;
 
-impl Fract8Ops for Rgba<u8> {
-    #[inline]
-    fn scale8(self, scale: Fract8) -> Self {
-        Rgba::new(
-            self.r.scale8(scale),
-            self.g.scale8(scale),
-            self.b.scale8(scale),
-            self.a.scale8(scale)
-        )
-    }
-
-    #[inline]
-    fn blend8(self, other: Self, scale: Fract8) -> Self {
-        match scale {
-            0 => self,
-            255 => other,
-            _ => match (other.r, other.g, other.b) {
-                (0, 0, 0) => self,
-                _ => Rgba::new(
-                    self.r.blend8(other.r, scale),
-                    self.g.blend8(other.g, scale),
-                    self.b.blend8(other.b, scale),
-                    self.a.blend8(other.a, scale)
-                )
-            }
+    use super::Fract8Ops;
+    impl Fract8Ops for BinaryColor {
+        fn scale8(self, scale: super::Fract8) -> Self {
+            self
+        }
+    
+        fn blend8(self, other: Self, scale: super::Fract8) -> Self {
+            self
+        }
+    
+        fn saturating_add(self, other: Self) -> Self {
+            self
+        }
+    
+        fn lerp8by8(self, other: Self, scale: super::Fract8) -> Self {
+            self
         }
     }
-
-    #[inline]
-    fn saturating_add(self, other: Self) -> Self {
-        Rgba::new(
-            self.r.saturating_add(other.r),
-            self.g.saturating_add(other.g),
-            self.b.saturating_add(other.b),
-            self.a.saturating_add(other.a)
-        )
-    }
-    
-    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
-        Rgba::new(
-            self.r.lerp8by8(other.r, scale),
-            self.g.lerp8by8(other.g, scale),
-            self.b.lerp8by8(other.b, scale),
-            self.a.lerp8by8(other.a, scale)
-        )
-    }
 }
 
-impl Fract8Ops for Grb<u8> where {
-    fn scale8(self, scale: Fract8) -> Self {
-        Grb::new_grb(
-            self.g.scale8(scale),
-            self.r.scale8(scale),
-            self.b.scale8(scale)
-        )
-    }
-
-    fn blend8(self, other: Self, scale: Fract8) -> Self {
-        Rgb::new(self.r, self.g, self.b).blend8(other.into(), scale).into()
-    }
-
-    fn saturating_add(self, other: Self) -> Self {
-        Grb::new_grb(
-            self.g.saturating_add(other.g),
-            self.r.saturating_add(other.r),
-            self.b.saturating_add(other.b)
-        )
-    }
-
-    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
-        Grb::new_grb(
-            self.g.lerp8by8(other.g, scale),
-            self.r.lerp8by8(other.r, scale),
-            self.b.lerp8by8(other.b, scale)
-        )
-    }
-}
-
-impl Fract8Ops for Rgb<u8> {
-    #[inline]
-    fn scale8(self, scale: Fract8) -> Self {
-        Rgb::new(
-            self.r.scale8(scale),
-            self.g.scale8(scale),
-            self.b.scale8(scale)
-        )
-    }
-
-    #[inline]
-    fn blend8(self, other: Self, scale: Fract8) -> Self {
-        match scale {
-            0 => self,
-            255 => other,
-            _ => match (other.r, other.g, other.b) {
-                (0, 0, 0) => self,
-                _ => Rgb::new(
-                    self.r.blend8(other.r, scale),
-                    self.g.blend8(other.g, scale),
-                    self.b.blend8(other.b, scale)
-                )
-            }
-        }
-    }
-
-    #[inline]
-    fn saturating_add(self, other: Self) -> Self {
-        Rgb::new(
-            self.r.saturating_add(other.r),
-            self.g.saturating_add(other.g),
-            self.b.saturating_add(other.b)
-        )
-    }
-    
-    fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
-        Rgb::new(
-            self.r.lerp8by8(other.r, scale),
-            self.g.lerp8by8(other.g, scale),
-            self.b.lerp8by8(other.b, scale)
-        )
-    }
-}
-
-#[inline]
+#[inline(always)]
 pub fn scale8<T: Fract8Ops>(i: T, scale: Fract8) -> T {
     i.scale8(scale)
 }
