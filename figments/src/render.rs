@@ -43,14 +43,14 @@ pub trait Painter<U, Space: CoordinateSpace, Input> {
     fn paint(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U, rect: &Rectangle<Space>);
 }
 
-impl<'a, U, Space: CoordinateSpace, Input: 'static, T> Painter<U, Space, Input> for T where T: Sample<'a, Space>, T::Output: PixelSink<Input> {
+impl<'a, U, Space: CoordinateSpace, Input: 'static, T> Painter<U, Space, Input> for T where T: Sample<'a, Space>, T::Output: AdditivePixelSink<Input> {
     fn fill(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U) {
         self.paint(shader, uniforms, &Rectangle::everything());
     }
 
     fn paint(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U, rect: &Rectangle<Space>) {
         for (coords, pixel) in self.sample(rect) {
-            pixel.set(&shader.draw(&coords, uniforms));
+            pixel.add(shader.draw(&coords, uniforms), 255);
         }
     }
 }
