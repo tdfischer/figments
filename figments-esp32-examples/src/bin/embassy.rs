@@ -15,7 +15,7 @@ use figments_render::{output::Brightness, power::AsMilliwatts, smart_leds::Power
 use core::num::Wrapping;
 use figments_sample_shaders::*;
 
-use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
+use esp_hal_smartled::{SmartLedsAdapter, SmartLedsAdapterAsync, smart_led_buffer};
 use smart_leds::{
     brightness, gamma,
     hsv::{hsv2rgb},
@@ -24,7 +24,13 @@ use smart_leds::{
 
 use esp_hal::gpio::AnyPin;
 use esp_hal::gpio::Pin;
-use esp_hal::timer::systimer::SystemTimer;
+//use esp_hal::timer::systimer::SystemTimer;
+use esp_rtos::embassy::Executor;
+use esp_hal::system::Stack;
+use esp_hal::interrupt::software::SoftwareInterruptControl;
+use core::ptr::addr_of_mut;
+use static_cell::StaticCell;
+use esp_hal::timer::timg::TimerGroup;
 
 use embassy_time::Timer;
 
@@ -38,8 +44,9 @@ async fn main(spawner: Spawner) {
 
     let p = esp_hal::init(esp_hal::Config::default());
 
-    let sys_timer = SystemTimer::new(p.SYSTIMER);
-    esp_rtos::start(sys_timer.alarm1);
+    //let sys_timer = SystemTimer::new(p.SYSTIMER);
+    let sys_timer = TimerGroup::new(p.TIMG0);
+    esp_rtos::start(sys_timer.timer0);
 
     esp_println::logger::init_logger_from_env();
 
@@ -48,10 +55,10 @@ async fn main(spawner: Spawner) {
     // The surface pool will become the single point of contact between both tasks. The pool is created here and stays with the task for the rendering, while individual surfaces can get handed out to other tasks
     let mut surfaces = BufferedSurfacePool::default();
 
-    // Our scene will have three separate layers that have their opacities animated around based on the frame.
-    // Layers are rendered from first to last, meaning the first layer is the 'bottom' layer on top of which others are drawn.
+    // Our scene will have separate layers each with different shaders that have their opacities animated around based on the frame.
+    // Layers are rendered from first to last, meaning the first layer created is the 'bottom' layer on top of which others are drawn.
 
-    // Additionally, a glowing background color is always visible below all the layers, so we draw it separately
+    // A glowing background color is always visible below all the layers, so we draw it separately
     let mut background_shader = SurfaceBuilder::build(&mut surfaces).shader(ColorGlow::default()).finish().unwrap();
 
     let mut layers = [
@@ -60,7 +67,15 @@ async fn main(spawner: Spawner) {
     ];
 
     // From here, we separate the rendering and hardware writing from the UI updating into two tasks. On the esp32s3, you could consider running the layering task on the second core.
-    spawner.spawn(layer_task(layers, background_shader)).unwrap();
+    static mut CORE2_STACK: Stack<16384> = Stack::new();
+    let swi = SoftwareInterruptControl::new(p.SW_INTERRUPT);
+    esp_rtos::start_second_core(p.CPU_CTRL, swi.software_interrupt0, swi.software_interrupt1, unsafe { &mut *addr_of_mut!(CORE2_STACK) }, || {
+        static CORE2_EXEC: StaticCell<Executor> = StaticCell::new();
+        let exec = CORE2_EXEC.init_with(|| { Executor::new() });
+        exec.run(|spawner| {
+            spawner.spawn(layer_task(layers, background_shader)).unwrap();
+        });
+    });
     spawner.spawn(render_task(surfaces, p.RMT, p.GPIO5.degrade())).unwrap();
 }
 
@@ -91,8 +106,8 @@ async fn layer_task(mut layers: [BufferedSurface<FrameNumber, LinearSpace, Rgb<u
 async fn render_task(mut surfaces: BufferedSurfacePool<FrameNumber, LinearSpace, Rgb<u8>>, rmt: esp_hal::peripherals::RMT<'static>, pin: AnyPin<'static>) {
     // Configure the RMT driver
     let frequency: Rate = Rate::from_mhz(80);
-    let rmt: Rmt<'_, esp_hal::Blocking> = Rmt::new(rmt, frequency)
-        .expect("Failed to initialize RMT");
+    let rmt = Rmt::new(rmt, frequency)
+        .expect("Failed to initialize RMT").into_async();
 
     let rmt_channel = rmt.channel0;
 
@@ -119,10 +134,10 @@ async fn render_task(mut surfaces: BufferedSurfacePool<FrameNumber, LinearSpace,
 
     // Construct the actual smart-leds output
     let mut pixbuf = [Default::default(); NUM_LEDS];
-    let mut rmt_buffer = smart_led_buffer!(NUM_LEDS);
+    let mut rmt_buffer = smart_led_buffer!(NUM_LEDS + 25);
 
     // By default, SmartLedsAdapter works with GRB pixels, but you could also change the hardware color space by changing the type of the pixbuf above
-    let mut target = SmartLedsAdapter::new(rmt_channel, pin, &mut rmt_buffer);
+    let mut target = SmartLedsAdapterAsync::new(rmt_channel, pin, &mut rmt_buffer);
 
     // Stick a power management API on top of it
     let mut writer = PowerManagedWriter::new(target, MAX_POWER_MW);
@@ -146,7 +161,7 @@ async fn render_task(mut surfaces: BufferedSurfacePool<FrameNumber, LinearSpace,
         let draw_time = start.elapsed();
 
         // Finally, write out the rendered frame
-        writer.write(&pixbuf).expect("Failed to write to LEDs!");
+        writer.write_async(&pixbuf).await.expect("Failed to write to LEDs!");
         let flush_time = start.elapsed();
 
         let cur_second = start.as_secs();
