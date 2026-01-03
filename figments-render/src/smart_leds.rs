@@ -46,43 +46,13 @@ impl GammaCorrected for PowerControls {
     }
 }
 
-pub struct PowerManagedWriterAsync<T: SmartLedsWriteAsync> {
-    target: T,
-    controls: PowerControls
-}
-
-impl<T: SmartLedsWriteAsync> PowerManagedWriterAsync<T> where T::Color: Copy + Fract8Ops + WithGamma, T::Error: core::fmt::Debug {
-    pub async fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> {
-        if self.controls.is_on {
-            let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
-            self.controls.cur_mw = with_gamma.as_milliwatts();
-            let b = brightness_for_mw(self.controls.cur_mw, self.controls.brightness, self.controls.max_mw);
-            let iter = with_gamma.as_ref().iter().map(|x| { x.scale8(b) });
-            self.target.write(iter).await
-        } else {
-            self.target.write(pixbuf.as_ref().iter().map(|x| { x.scale8(0) })).await
-        }
-    }
-
-    pub fn new(target: T, max_mw: u32) -> Self {
-        Self {
-            target,
-            controls: PowerControls::new(max_mw)
-        }
-    }
-
-    pub fn controls(&mut self) -> &mut PowerControls {
-        &mut self.controls
-    }
-}
-
 #[derive(Debug)]
-pub struct PowerManagedWriter<T: SmartLedsWrite> {
+pub struct PowerManagedWriter<T> {
     target: T,
     controls: PowerControls
 }
 
-impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: Fract8Ops + Copy + WithGamma, T::Error: core::fmt::Debug {
+impl<T> PowerManagedWriter<T> {
     pub fn new(target: T, max_mw: u32) -> Self {
         Self {
             target,
@@ -90,7 +60,7 @@ impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: Fract8Ops + Copy +
         }
     }
 
-    pub fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> {
+    pub fn write<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWrite, T::Color: Fract8Ops + Copy + WithGamma  + core::fmt::Debug {
         if self.controls.is_on {
             let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
             self.controls.cur_mw = with_gamma.as_milliwatts();
@@ -99,6 +69,19 @@ impl<T: SmartLedsWrite> PowerManagedWriter<T> where T::Color: Fract8Ops + Copy +
             self.target.write(iter)
         } else {
             self.target.write(pixbuf.as_ref().iter().map(|x| { x.scale8(0) }))
+        }
+    }
+
+
+    pub async fn write_async<P: AsMilliwatts + AsRef<[T::Color]> + WithGamma + Copy>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWriteAsync, T::Color: Fract8Ops + Copy + WithGamma {
+        if self.controls.is_on {
+            let with_gamma = pixbuf.with_gamma(&self.controls.gamma_curve);
+            self.controls.cur_mw = with_gamma.as_milliwatts();
+            let b = brightness_for_mw(self.controls.cur_mw, self.controls.brightness, self.controls.max_mw);
+            let iter = with_gamma.as_ref().iter().map(|x| { x.scale8(b) });
+            self.target.write(iter).await
+        } else {
+            self.target.write(pixbuf.as_ref().iter().map(|x| { x.scale8(0) })).await
         }
     }
 
