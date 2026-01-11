@@ -38,17 +38,20 @@ macro_rules! rgba_pixel_sink {
     };
 }
 
+rgb_pixel_sink!(Grb Grb);
 rgb_pixel_sink!(Grb Rgb);
 rgb_pixel_sink!(Grb Bgr);
 rgba_pixel_sink!(Grb Rgba);
 rgba_pixel_sink!(Grb Bgra);
 
+rgb_pixel_sink!(Rgb Rgb);
 rgb_pixel_sink!(Rgb Grb);
 rgb_pixel_sink!(Rgb Bgr);
 rgba_pixel_sink!(Rgb Rgba);
 rgba_pixel_sink!(Rgb Bgra);
 
-rgb_pixel_sink!(Bgr Rgb);
 rgb_pixel_sink!(Bgr Bgr);
+rgb_pixel_sink!(Bgr Rgb);
+rgb_pixel_sink!(Bgr Grb);
 rgba_pixel_sink!(Bgr Rgba);
 rgba_pixel_sink!(Bgr Bgra);
