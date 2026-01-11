@@ -25,7 +25,7 @@ pub trait RenderSource<Uniforms, Space: CoordinateSpace, Src, Dst> {
     /// Draws this source's pixels into the sampler
     fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &Uniforms)
         where 
-            Smp: Sample<'a, Space, Output = Dst>;
+            Smp: Sample<'a, Space, Output = Dst> + ?Sized;
 }
 
 impl<T, U, Space: CoordinateSpace, Pixel> Shader<U, Space, Pixel> for T where T: Send + Fn(&Coordinates<Space>, &U) -> Pixel {

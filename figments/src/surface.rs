@@ -10,8 +10,6 @@ use core::fmt::{Debug, Formatter};
 use ringbuf::{StaticRb, traits::*};
 use portable_atomic::AtomicBool;
 
-use core::cell::RefCell;
-
 impl<U, Space: CoordinateSpace, Pixel> Debug for ShaderBinding<U, Space, Pixel> where Rectangle<Space>: Debug {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ShaderBinding")
@@ -25,7 +23,6 @@ impl<U, Space: CoordinateSpace, Pixel> Debug for ShaderBinding<U, Space, Pixel> 
             .finish()
     }
 }
-
 struct ShaderBinding<U, Space: CoordinateSpace, Pixel> {
     shader: Option<Box<dyn Shader<U, Space, Pixel>>>,
     rect: Rectangle<Space>,
@@ -200,15 +197,13 @@ impl<U, Space: CoordinateSpace, Pixel> UpdateQueue<U, Space, Pixel> {
     }
 
     fn try_take(&self) -> Option<UpdateRB<U, Space, Pixel>> {
-        critical_section::with(|_| {
-            if self.damaged.load(core::sync::atomic::Ordering::Acquire) {
-                let mut updates = self.pending.lock();
-                self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
-                Some(core::mem::take(updates.as_mut()))
-            } else {
-                None
-            } 
-        })
+        if self.damaged.load(core::sync::atomic::Ordering::Acquire) {
+            let mut updates = self.pending.lock();
+            self.damaged.store(false, core::sync::atomic::Ordering::Relaxed);
+            Some(core::mem::take(updates.as_mut()))
+        } else {
+            None
+        }
     }
 }
 
@@ -275,7 +270,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel> BufferedSurfacePool<U, Space, Pi
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: Copy + Fract8Ops + 'static + Copy> Surfaces<Space> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace, Pixel: Copy + Fract8Ops + 'static + Copy> Surfaces for BufferedSurfacePool<U, Space, Pixel> {
     type Error = ();
     type Surface = BufferedSurface<U, Space, Pixel>;
     
@@ -284,7 +279,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: Copy + Fract8Ops + 'static + Cop
     }
 }
 
-impl<U: 'static, Space: CoordinateSpace, Pixel: 'static, HwPixel: AdditivePixelSink<Pixel> + 'static> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> {
+impl<U: 'static, Space: CoordinateSpace + core::fmt::Debug, Pixel: 'static + Debug, HwPixel: AdditivePixelSink<Pixel> + 'static> RenderSource<U, Space, Pixel, HwPixel> for BufferedSurfacePool<U, Space, Pixel> where Space::Data: core::fmt::Debug {
     fn render_to<'a, S>(&self, output: &mut S, uniforms: &U)
         where 
             S: Sample<'a, Space, Output = HwPixel> + ?Sized {
@@ -305,19 +300,19 @@ impl<U: 'static, Space: CoordinateSpace, Pixel: 'static, HwPixel: AdditivePixelS
 }
 
 /// Types that can provide [Surface]s and render their surfaces to a [Sample]-able type
-pub trait Surfaces<Space: CoordinateSpace>/* : RenderSource<<Self::Surface as Surface>::Uniforms, Space, <Self::Surface as Surface>::Pixel, <Self::Surface as Surface>::Pixel>*/ {
+pub trait Surfaces {
     /// The underlying surface type created by this backend
-    type Surface: Surface<CoordinateSpace = Space>;
+    type Surface: Surface;
 
     /// Error type for operations
     type Error;
 
     /// Creates a new surface if possible over the given area
-    fn new_surface(&mut self, area: Rectangle<Space>) -> Result<Self::Surface, Self::Error>;
+    fn new_surface(&mut self, area: Rectangle<<Self::Surface as Surface>::CoordinateSpace>) -> Result<Self::Surface, Self::Error>;
 }
 
 /// Builder pattern API for creating surfaces
-pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel> {
+pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
     opacity: Option<u8>,
@@ -325,7 +320,7 @@ pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfa
     visible: Option<bool>
 }
 
-impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<S::CoordinateSpace, Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
+impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, S::CoordinateSpace, S::Pixel> + 'static, U, Pixel> SurfaceBuilder<'a, S, SS, SF, U, Pixel> {
     /// Starts building a surface
     pub fn build(surfaces: &'a mut SS) -> Self {
         Self {
@@ -502,7 +497,7 @@ impl<U, Space: CoordinateSpace, P> Surface for NullSurface<U, Space, P> {
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {}
 }
 
-impl<U: Default, Space: CoordinateSpace, P> Surfaces<Space> for NullBufferPool<U, Space, P> {
+impl<U: Default, Space: CoordinateSpace, P> Surfaces for NullBufferPool<U, Space, P> {
     type Surface = NullSurface<U, Space, P>;
 
     type Error = ();
