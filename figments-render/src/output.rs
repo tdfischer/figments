@@ -14,25 +14,25 @@ pub trait GammaCorrected {
 }
 
 /// A hardware output that provides an interface to the underlying hardware pixels, including actually turning pixels into photons
-pub trait Output<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> + 'a {
+pub trait Output<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> {
     type Error;
     type Controls: Brightness + GammaCorrected;
 
     /// Commits the contents of the underlying pixel buffers to hardware
     fn commit(&mut self)  -> Result<(), Self::Error>;
 
-    fn controls(&self) -> Option<&Self::Controls>;
+    fn controls(&mut self) -> Option<&mut Self::Controls>;
 }
 
 /// A hardware output that provides an interface to the underlying hardware pixels, including actually turning pixels into photons, but async flavored
-pub trait OutputAsync<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> + 'a {
+pub trait OutputAsync<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace> {
     type Error;
     type Controls: Brightness + GammaCorrected;
 
     /// Commits the contents of the underlying pixel buffers to hardware
     async fn commit_async(&mut self)  -> Result<(), Self::Error>;
 
-    fn controls(&self) -> Option<&Self::Controls>;
+    fn controls(&mut self) -> Option<&mut Self::Controls>;
 }
 
 #[derive(Default, Debug, Clone, Copy)]
