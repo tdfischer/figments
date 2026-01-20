@@ -17,7 +17,7 @@ pub struct Hsv {
 }
 
 impl Hsv {
-    pub fn new(hue: u8, saturation: u8, value: u8) -> Self {
+    pub const fn new(hue: u8, saturation: u8, value: u8) -> Self {
         Hsv {
             hue,
             saturation,
