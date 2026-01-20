@@ -5,9 +5,9 @@ use core::iter::Iterator;
 
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
 
-use figments::{liber8tion::interpolate::Fract8, prelude::*};
+use figments::{mappings::linear::LinearSpace, prelude::*};
 
-use crate::{gamma::{GammaCurve, WithGamma}, output::{Brightness, GammaCorrected, Output}, power::*};
+use crate::{gamma::{GammaCurve, WithGamma}, output::{Brightness, GammaCorrected, Output, OutputAsync}, power::*};
 
 #[derive(Debug)]
 pub struct PowerControls {
@@ -90,5 +90,75 @@ impl<T> PowerManagedWriter<T> {
     /// Returns the total power required to display the previous write at full brightness. This is /not/ the actual power consumption, only a theoretical maximum useful for designing power supplies.
     pub const fn max_mw(&self) -> u32 {
         self.controls.cur_mw
+    }
+}
+
+pub struct SmartLedsOutput<'a, T, Pixbuf> {
+    writer: PowerManagedWriter<T>,
+    pixbuf: &'a mut Pixbuf,
+    buf_idx: usize,
+    clip: Rectangle<LinearSpace>
+}
+
+impl<'a, T, Pixel, const PIXEL_COUNT: usize> SmartLedsOutput<'a, T, [Pixel; PIXEL_COUNT]> {
+    pub fn new(target: T, pixbuf: &'a mut [Pixel; PIXEL_COUNT], max_mw: u32) -> Self {
+        Self {
+            writer: PowerManagedWriter::new(target, max_mw),
+            pixbuf,
+            buf_idx: 0,
+            clip: Rectangle::everything()
+        }
+    }
+
+    pub const fn pixbuf(&mut self) -> &mut [Pixel; PIXEL_COUNT] {
+        self.pixbuf
+    }
+
+    pub fn set_clip(&mut self, clip: Rectangle<LinearSpace>) {
+        self.clip = clip;
+    }
+
+    // TODO: We could just put this into a DoubleBufferedPixbuf, then there isn't a need to call this ever with SmartLedsOutput, as you could do output.pixbuf().swap(&mut next) with that.
+    pub fn swap_buffer(&mut self, pixbuf: &'a mut [Pixel; PIXEL_COUNT]) -> &'a mut [Pixel; PIXEL_COUNT] {
+        self.buf_idx = (self.buf_idx + 1) % self.pixbuf.as_ref().len();
+        core::mem::replace(&mut self.pixbuf, pixbuf)
+    }
+}
+
+impl<'a, T: SmartLedsWrite + 'a, Pixbuf: AsRef<[T::Color]>> Output<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Fract8Ops + Copy + WithGamma {
+    type Error = T::Error;
+
+    type Controls = PowerControls;
+
+    fn commit(&mut self)  -> Result<(), Self::Error> {
+        self.writer.write(&self.pixbuf)
+    }
+
+    fn controls(&mut self) -> Option<&mut Self::Controls> {
+        Some(self.writer.controls())
+    }
+}
+
+impl<'a, T: SmartLedsWriteAsync + 'a, Pixbuf: AsRef<[T::Color]>> OutputAsync<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Fract8Ops + Copy + WithGamma {
+    type Error = T::Error;
+
+    type Controls = PowerControls;
+
+    async fn commit_async(&mut self)  -> Result<(), Self::Error> {
+        self.writer.write_async(&self.pixbuf).await
+    }
+
+    fn controls(&mut self) -> Option<&mut Self::Controls> {
+        Some(self.writer.controls())
+    }
+}
+
+impl<'a, T, Color, const PIXEL_COUNT: usize> Sample<'a, LinearSpace> for SmartLedsOutput<'a, T, [Color; PIXEL_COUNT]> where Color: 'a {
+    type Output = Color;
+
+    fn sample(&mut self, rect: &figments::prelude::Rectangle<LinearSpace>) -> impl Iterator<Item = (figments::prelude::Coordinates<LinearSpace>, &'a mut Self::Output)> {
+        let start = self.clip.top_left.x.clamp(0, self.pixbuf.len() - 1);
+        let end = self.clip.bottom_right.x.clamp(0, self.pixbuf.len() - 1);
+        self.pixbuf[start..=end].sample(rect)
     }
 }
