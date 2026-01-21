@@ -1,6 +1,11 @@
 [package]
 name = "figments-sample-shaders"
+description = "Sample graphics shaders for usage with Figments"
 version = "0.1.0"
+readme = "README.md"
+repository = "https://github.com/tdfischer/figments"
+keywords = ["ws2812", "esp32", "smart-leds", "embedded-graphics"]
+categories = ["graphics", "embedded", "rendering::engine"]
 authors = ["tdfischer"]
 edition = "2021"
 license = "LGPL-2.1-or-later"
