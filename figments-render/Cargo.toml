@@ -1,6 +1,6 @@
 [package]
 name = "figments-render"
-description = "A high performance graphics hardware control API for microcontrollers"
+description = "A high performance graphics hardware control layer for microcontrollers using the Figments rendering API"
 readme = "README.md"
 repository = "https://github.com/tdfischer/figments"
 keywords = ["ws2812", "esp32", "smart-leds", "embedded-graphics"]

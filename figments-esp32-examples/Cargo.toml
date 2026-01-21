@@ -26,8 +26,8 @@ esp-hal-smartled = { version = "0.17" }
 esp-println = { version = "0.16", features = ["log-04"] }
 log = { version = "0.4.26" }
 smart-leds = "0.4.0"
-figments = { path = "../figments", features = ["log-04", "alloc"] }
-figments-render = { path = "../figments-render", features = ["log-04"] }
+figments = { version = "0.0.3", path = "../figments", features = ["log-04", "alloc"] }
+figments-render = { version = "0.0.3", path = "../figments-render", features = ["log-04"] }
 figments-sample-shaders = { path = "../figments-sample-shaders", version = "0.1", features = ["micromath"] }
 rgb = "0.8"
 esp-alloc = "0.9.0"

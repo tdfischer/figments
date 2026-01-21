@@ -25,8 +25,8 @@ esp32s3 = []
 [dependencies]
 log = { version = "0.4", default-features = false }
 esp-idf-svc = { version = "0.51", default-features = false, features = ["alloc", "binstart", "std", "native"] }
-figments = { path = "../figments/", features = ["alloc", "std", "embedded-graphics"] }
-figments-render = { path = "../figments-render" }
+figments = { version = "0.0.3", path = "../figments/", features = ["alloc", "std", "embedded-graphics"] }
+figments-render = { version = "0.0.3",  path = "../figments-render" }
 rgb = "0.8.50"
 ws2812-esp32-rmt-driver = { version = "0.12.0", default-features = false, features = ["smart-leds-trait", "std"] }
 smart-leds-trait = "0.3.1"
