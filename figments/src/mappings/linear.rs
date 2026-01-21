@@ -2,7 +2,6 @@ use core::cmp::min;
 use core::fmt::Debug;
 
 use crate::geometry::*;
-use crate::pixels::*;
 use crate::render::Sample;
 
 /// Linear coordinate space where Y is meaningless and X points to a unique pixel

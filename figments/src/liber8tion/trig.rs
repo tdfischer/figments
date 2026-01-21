@@ -1,7 +1,5 @@
 use super::sin_table::SIN_TABLE;
 
-const B_M16_INTERLEAVE: [u8; 8] = [0, 49, 49, 41, 90, 27, 117, 10];
-
 pub trait Trig8 {
     fn sin8(self) -> u8;
     fn cos8(self) -> u8;

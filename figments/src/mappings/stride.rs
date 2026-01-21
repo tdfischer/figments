@@ -3,7 +3,6 @@ use core::ops::IndexMut;
 
 use crate::geometry::*;
 use crate::liber8tion::interpolate::scale8;
-use crate::render::Sample;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
@@ -199,34 +198,6 @@ impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> Iterator for StrideView<'a, P, 
         }
 
         None
-    }
-}
-
-struct StrideSampler<'a, P: 'a, PB: IndexMut<usize, Output = P>> {
-    map: &'a StrideMapping,
-    pixbuf: &'a mut PB
-}
-
-impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> StrideSampler<'a, P, PB> {
-    pub fn new(pixbuf: &'a mut PB, map: &'a StrideMapping) -> Self {
-        Self {
-            pixbuf,
-            map
-        }
-    }
-}
-
-impl<'a, P: 'a, PB: IndexMut<usize, Output = P>> Sample<'a, Virtual> for StrideSampler<'a, P, PB> {
-    type Output = P;
-
-    fn sample(&mut self, rect: &Rectangle<Virtual>) -> impl Iterator<Item = (Coordinates<Virtual>, &'a mut Self::Output)> {
-        let bufref = unsafe {
-            &mut *(self.pixbuf as *mut PB)
-        };
-        let mapref = unsafe {
-            & *(self.map as *const StrideMapping)
-        };
-        StrideView::new(bufref, mapref, rect)
     }
 }
 

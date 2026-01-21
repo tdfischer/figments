@@ -38,11 +38,13 @@ pub trait OutputAsync<'a, SampleSpace: CoordinateSpace>: Sample<'a, SampleSpace>
 #[derive(Default, Debug, Clone, Copy)]
 pub struct NullControls {}
 
+#[expect(unused_variables)]
 impl Brightness for NullControls {
     fn set_brightness(&mut self, brightness: u8) {}
     fn set_on(&mut self, is_on: bool) {}
 }
 
+#[allow(unused_variables)]
 impl GammaCorrected for NullControls {
     fn set_gamma(&mut self, gamma: GammaCurve) {}
 }

@@ -450,7 +450,9 @@ impl<U, Space: CoordinateSpace, Pixel> Shader<U, Space, Pixel> for Box<dyn Shade
     }
 }
 
+/// A buffer pool that does nothing. Useful for testing.
 pub struct NullBufferPool<U, Space: CoordinateSpace, P>(NullSurface<U, Space, P>);
+/// A surface that does nothing. Useful for testing.
 pub struct NullSurface<U, Space: CoordinateSpace, P>(PhantomData<Space>, PhantomData<U>, PhantomData<P>);
 
 impl<U: Default, Space: CoordinateSpace, P> Default for NullSurface<U, Space, P> {
@@ -477,6 +479,7 @@ impl<U: Default + core::fmt::Debug, Space: CoordinateSpace, P> core::fmt::Debug 
     }
 }
 
+#[expect(unused_variables)]
 impl<U, Space: CoordinateSpace, P> Surface for NullSurface<U, Space, P> {
     type Uniforms = U;
 
@@ -497,6 +500,7 @@ impl<U, Space: CoordinateSpace, P> Surface for NullSurface<U, Space, P> {
     fn set_offset(&mut self, offset: Coordinates<Self::CoordinateSpace>) {}
 }
 
+#[expect(unused_variables)]
 impl<U: Default, Space: CoordinateSpace, P> Surfaces for NullBufferPool<U, Space, P> {
     type Surface = NullSurface<U, Space, P>;
 
@@ -507,6 +511,7 @@ impl<U: Default, Space: CoordinateSpace, P> Surfaces for NullBufferPool<U, Space
     }
 }
 
+#[expect(unused_variables)]
 impl<U: Default, Space: CoordinateSpace, P> RenderSource<U, Space, P, P> for NullBufferPool<U, Space, P> {
     fn render_to<'a, Smp>(&'a self, output: &'a mut Smp, uniforms: &U)
         where 

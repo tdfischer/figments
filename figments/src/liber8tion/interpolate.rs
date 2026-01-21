@@ -2,6 +2,7 @@ use core::ops::BitOr;
 
 use rgb::*;
 
+/// An alias for u8 to indicate that the value is a fraction from 0-255 where 0 is 0% and 255 is 100%
 pub type Fract8 = u8;
 
 macro_rules! fract8_color_impl {

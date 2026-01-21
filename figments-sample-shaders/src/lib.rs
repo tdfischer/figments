@@ -3,7 +3,7 @@ use figments::prelude::*;
 use figments::liber8tion::trig::*;
 use figments::liber8tion::noise::*;
 use figments::liber8tion::interpolate::*;
-use core::cmp::{max, min};
+use core::cmp::max;
 use rgb::*;
 
 #[cfg(feature="micromath")]
