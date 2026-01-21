@@ -52,7 +52,9 @@ impl CoordinateOp for i32 {
     const MAX: i32 = i32::MAX;
     
     fn distance(x1: Self, y1: Self, x2: Self, y2: Self) -> Self {
-        todo!()
+        let dx = (max(x1, x2) - min(x1, x2)) as u16;
+        let dy = (max(y1, y2) - min(y1, y2)) as u16;
+        (dx.saturating_mul(dx).saturating_add(dy.saturating_mul(dy))).sqrt() as i32
     }
     
     fn iter_range(start: Self, end: Self) -> impl Iterator<Item = Self> {
