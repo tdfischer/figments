@@ -1,6 +1,6 @@
 #![no_std]
 #![doc = include_str!("../README.md")]
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 pub mod geometry;
 pub mod mappings;
 pub mod render;
