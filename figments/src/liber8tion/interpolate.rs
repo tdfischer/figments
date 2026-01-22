@@ -104,11 +104,11 @@ impl Fract8Ops for u8 {
     fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
         if other > self {
             let delta = other - self;
-            let scaled = scale8(delta, scale);
+            let scaled = delta.scale8(scale);
             self + scaled
         } else {
             let delta = self - other;
-            let scaled = scale8(delta, scale);
+            let scaled = delta.scale8(scale);
             self - scaled
         }
     }
@@ -133,11 +133,11 @@ impl Fract8Ops for usize {
     fn lerp8by8(self, other: Self, scale: Fract8) -> Self {
         if other > self {
             let delta = other - self;
-            let scaled = scale8(delta, scale);
+            let scaled = delta.scale8(scale);
             self + scaled
         } else {
             let delta = self - other;
-            let scaled = scale8(delta, scale);
+            let scaled = delta.scale8(scale);
             self - scaled
         }
     }
@@ -165,11 +165,6 @@ mod embedded_impl {
             self
         }
     }
-}
-
-#[inline(always)]
-pub fn scale8<T: Fract8Ops>(i: T, scale: Fract8) -> T {
-    i.scale8(scale)
 }
 
 #[inline]
@@ -200,11 +195,11 @@ pub fn grad8(hash: u8, x: i8, y: i8) -> i8 {
 pub fn lerp7by8(a: i8, b: i8, frac: u8) -> i8 {
     if b > a {
         let delta: u8 = b.wrapping_sub(a) as u8;
-        let scaled: u8 = scale8(delta, frac);
+        let scaled: u8 = delta.scale8(frac);
         a.wrapping_add(scaled as i8)
     } else {
         let delta: u8 = a.wrapping_sub(b) as u8;
-        let scaled: u8 = scale8(delta, frac);
+        let scaled: u8 = delta.scale8(frac);
         a.wrapping_sub(scaled as i8)
     }
 }
@@ -215,7 +210,7 @@ pub fn lerp8by8<T: Fract8Ops>(a: T, b: T, frac: u8) -> T {
 
 pub fn map8(x: u8, range_start: u8, range_end: u8) -> u8 {
     let range_width = range_end - range_start;
-    let mut out = scale8(x, range_width);
+    let mut out = x.scale8(range_width);
     out += range_start;
     out
 }
@@ -226,7 +221,7 @@ pub fn ease_in_out_quad(i: u8) -> u8 {
     } else {
         i
     };
-    let jj = scale8(j, j);
+    let jj = j.scale8(j);
     let jj2 = jj.wrapping_shl(1);
     if i & 0x80 == 0 {
         jj2

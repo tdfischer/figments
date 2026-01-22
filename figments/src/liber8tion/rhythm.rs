@@ -1,4 +1,6 @@
-use super::{interpolate::scale8, trig::sin8};
+use crate::liber8tion::trig::Trig8;
+
+use super::interpolate::Fract8Ops;
 
 fn beat88(now: u32, bpm: u16, timebase: u32) -> u16 {
     (((now - timebase).wrapping_mul(bpm as u32).wrapping_mul(280)).wrapping_shr(16)) as u16
@@ -19,9 +21,9 @@ fn beat8(now: u32, bpm: u16, timebase: u32) -> u8 {
 
 pub fn beatsin8(now: u32, bpm: u16, lowest: u8, highest: u8, timebase: u32, phase: u8) -> u8 {
     let beat = beat8(now, bpm, timebase);
-    let beatsin = sin8(beat.wrapping_add(phase));
+    let beatsin = beat.wrapping_add(phase).sin8();
     let width = highest - lowest;
-    let scaledbeat = scale8(beatsin, width);
+    let scaledbeat = beatsin.scale8(width);
     
     lowest + scaledbeat
 } 

@@ -11,7 +11,7 @@ impl Trig8 for u8 {
     }
 
     fn cos8(self) -> u8 {
-        sin8(self.wrapping_add(64))
+        self.wrapping_add(64).sin8()
     }
 }
 
@@ -33,12 +33,4 @@ impl Trig8 for i32 {
     fn cos8(self) -> u8 {
         ((self % 255) as u8).cos8()
     }
-}
-
-pub fn sin8<T: Trig8>(theta: T) -> u8 {
-    theta.sin8()
-}
-
-pub fn cos8<T: Trig8>(theta: T) -> u8 {
-    theta.cos8()
 }
