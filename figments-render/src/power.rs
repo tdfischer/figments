@@ -1,3 +1,4 @@
+use figments::liber8tion::interpolate::Fract8;
 use rgb::{Grb, Rgb, Bgr};
 
 pub trait AsMilliwatts {
@@ -44,12 +45,12 @@ impl<T, const S: usize> AsMilliwatts for [T; S] where T: AsMilliwatts {
     }
 }
 
-pub fn brightness_for_mw(total_mw : u32, target : u8, max_power: u32) -> u8 {
-    let target32 = target as u32;
+pub fn brightness_for_mw(total_mw: u32, target: Fract8, max_power: u32) -> Fract8 {
+    let target32 = target.to_raw() as u32;
     let requested_mw = (total_mw * target32) / 256;
 
     if requested_mw > max_power {
-        ((target32 * max_power) / requested_mw) as u8
+        Fract8::from_raw(((target32 * max_power) / requested_mw) as u8)
     } else {
         target
     }

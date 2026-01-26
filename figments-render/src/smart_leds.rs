@@ -1,18 +1,18 @@
-use core::marker::Copy;
+use core::{marker::Copy, ops::Mul};
 use core::convert::AsRef;
 use core::result::Result;
 use core::iter::Iterator;
 
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
 
-use figments::{mappings::linear::LinearSpace, prelude::*};
+use figments::{liber8tion::interpolate::Fract8, mappings::linear::LinearSpace, prelude::*};
 
 use crate::{gamma::{GammaCurve, WithGamma}, output::{Brightness, GammaCorrected, Output, OutputAsync}, power::*};
 
 #[derive(Debug)]
 pub struct PowerControls {
     max_mw: u32,
-    brightness: u8,
+    brightness: Fract8,
     is_on: bool,
     gamma_curve: GammaCurve,
     cur_mw: u32
@@ -22,22 +22,22 @@ impl PowerControls {
     pub fn new(max_mw: u32) -> Self {
         Self {
             max_mw,
-            brightness: 255,
+            brightness: Fract8::MAX,
             is_on: true,
             gamma_curve: GammaCurve::default(),
             cur_mw: 0
         }
     }
 
-    pub fn iter_brightness<'a, Color, P: AsRef<[Color]> + ?Sized>(&'a mut self, pixbuf: &'a P) -> impl Iterator<Item = Color> + use<'a, Color, P> where Color: 'a + Copy + WithGamma + AsMilliwatts + Fract8Ops {
+    pub fn iter_brightness<'a, Color, P: AsRef<[Color]> + ?Sized>(&'a mut self, pixbuf: &'a P) -> impl Iterator<Item = Color> + use<'a, Color, P> where Color: 'a + Copy + WithGamma + AsMilliwatts + Mul<Fract8, Output = Color> {
         self.cur_mw = pixbuf.as_ref().iter().map(|x| { x.with_gamma(&self.gamma_curve).as_milliwatts() }).sum();
         let b = brightness_for_mw(self.cur_mw, self.brightness, self.max_mw);
-        pixbuf.as_ref().iter().map(move |x| { x.with_gamma(&self.gamma_curve).scale8(b) })
+        pixbuf.as_ref().iter().map(move |x| { x.with_gamma(&self.gamma_curve) * b })
     }
 }
 
 impl Brightness for PowerControls {
-    fn set_brightness(&mut self, brightness: u8) {
+    fn set_brightness(&mut self, brightness: Fract8) {
         self.brightness = brightness;
     }
 
@@ -66,20 +66,20 @@ impl<T> PowerManagedWriter<T> {
         }
     }
 
-    pub fn write<P: AsRef<[T::Color]> + ?Sized>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWrite, T::Color: Fract8Ops + Copy + WithGamma + AsMilliwatts + core::fmt::Debug {
+    pub fn write<P: AsRef<[T::Color]> + ?Sized>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWrite, T::Color: Mul<Fract8, Output = T::Color> + Copy + WithGamma + AsMilliwatts + core::fmt::Debug {
         if self.controls.is_on {
             self.target.write(self.controls.iter_brightness(pixbuf))
         } else {
-            self.target.write(pixbuf.as_ref().iter().map(|x| { x.scale8(0) }))
+            self.target.write(pixbuf.as_ref().iter().map(|x| { *x * Fract8::MIN }))
         }
     }
 
 
-    pub async fn write_async<P: AsRef<[T::Color]> + ?Sized>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWriteAsync, T::Color: Fract8Ops + Copy + WithGamma + AsMilliwatts + core::fmt::Debug {
+    pub async fn write_async<P: AsRef<[T::Color]> + ?Sized>(&mut self, pixbuf: &P) -> Result<(), T::Error> where T: SmartLedsWriteAsync, T::Color: Mul<Fract8, Output = T::Color> + Copy + WithGamma + AsMilliwatts + core::fmt::Debug {
         if self.controls.is_on {
             self.target.write(self.controls.iter_brightness(pixbuf)).await
         } else {
-            self.target.write(pixbuf.as_ref().iter().map(|x| { x.scale8(0) })).await
+            self.target.write(pixbuf.as_ref().iter().map(|x| { *x * Fract8::MIN })).await
         }
     }
 
@@ -125,7 +125,7 @@ impl<'a, T, Pixel, const PIXEL_COUNT: usize> SmartLedsOutput<'a, T, [Pixel; PIXE
     }
 }
 
-impl<'a, T: SmartLedsWrite + 'a, Pixbuf: AsRef<[T::Color]>> Output<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Fract8Ops + Copy + WithGamma {
+impl<'a, T: SmartLedsWrite + 'a, Pixbuf: AsRef<[T::Color]>> Output<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Mul<Fract8, Output = T::Color> + Copy + WithGamma {
     type Error = T::Error;
 
     type Controls = PowerControls;
@@ -139,7 +139,7 @@ impl<'a, T: SmartLedsWrite + 'a, Pixbuf: AsRef<[T::Color]>> Output<'a, LinearSpa
     }
 }
 
-impl<'a, T: SmartLedsWriteAsync + 'a, Pixbuf: AsRef<[T::Color]>> OutputAsync<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Fract8Ops + Copy + WithGamma {
+impl<'a, T: SmartLedsWriteAsync + 'a, Pixbuf: AsRef<[T::Color]>> OutputAsync<'a, LinearSpace> for SmartLedsOutput<'a, T, Pixbuf> where Self: Sample<'a, LinearSpace>, T::Color: core::fmt::Debug + AsMilliwatts + Mul<Fract8, Output = T::Color> + Copy + WithGamma {
     type Error = T::Error;
 
     type Controls = PowerControls;

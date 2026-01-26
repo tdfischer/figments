@@ -36,8 +36,8 @@ fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
     let ba = get_cube(b);
     let bb = get_cube(b.wrapping_add(1));
 
-    let mut u = x_src as u8;
-    let mut v = y_src as u8;
+    let mut u = Fract8::from_raw(x_src as u8);
+    let mut v = Fract8::from_raw(y_src as u8);
 
     let xx = ((x_src as u8).wrapping_shr(1) & 0x7f) as i8;
     let yy = ((y_src as u8).wrapping_shr(1) & 0x7f) as i8;
@@ -53,8 +53,8 @@ fn inoise8_raw(x_src: u16, y_src: u16) -> i8 {
 }
 
 #[inline]
-pub fn inoise8(x: i16, y: i16) -> u8 {
+pub fn inoise8(x: i16, y: i16) -> Fract8 {
     let mut n = inoise8_raw(x as u16, y as u16);
     n = n.wrapping_add(64);
-    (n as u8).saturating_add(n as u8)
+    Fract8::from_raw((n as u8).saturating_add(n as u8))
 }

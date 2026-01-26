@@ -1,7 +1,7 @@
 //! The core rendering engine types
 use super::geometry::*;
 
-use crate::pixels::*;
+use crate::{liber8tion::interpolate::Fract8, pixels::*};
 
 /// Types that can provide direct hardware access to individual pixels within a given [Virtual] rectangle shaped selection for reading and writing
 pub trait Sample<'a, Space: CoordinateSpace> {
@@ -50,7 +50,7 @@ impl<'a, U, Space: CoordinateSpace, Input: 'static, T> Painter<U, Space, Input> 
 
     fn paint(&mut self, shader: &impl Shader<U, Space, Input>, uniforms: &U, rect: &Rectangle<Space>) {
         for (coords, pixel) in self.sample(rect) {
-            pixel.add(shader.draw(&coords, uniforms), 255);
+            pixel.add(shader.draw(&coords, uniforms), Fract8::MAX);
         }
     }
 }

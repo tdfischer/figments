@@ -1,11 +1,11 @@
 #![allow(async_fn_in_trait)]
 
-use figments::prelude::*;
+use figments::{liber8tion::interpolate::Fract8, prelude::*};
 
 use crate::gamma::GammaCurve;
 
 pub trait Brightness {
-    fn set_brightness(&mut self, brightness: u8);
+    fn set_brightness(&mut self, brightness: Fract8);
     fn set_on(&mut self, is_on: bool);
 }
 
@@ -40,7 +40,7 @@ pub struct NullControls {}
 
 #[expect(unused_variables)]
 impl Brightness for NullControls {
-    fn set_brightness(&mut self, brightness: u8) {}
+    fn set_brightness(&mut self, brightness: Fract8) {}
     fn set_on(&mut self, is_on: bool) {}
 }
 

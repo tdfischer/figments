@@ -2,7 +2,7 @@ use core::cmp::{max, min};
 use core::ops::IndexMut;
 
 use crate::geometry::*;
-use crate::liber8tion::interpolate::Fract8Ops;
+use crate::liber8tion::interpolate::Fract8;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Stride {
@@ -121,12 +121,12 @@ impl<'a, P, PB: IndexMut<usize, Output = P>> StrideView<'a, P, PB> {
         // Zero-index shape of the pixel picking area
         let range: Rectangle<StrideSpace> = Rectangle::new(
             Coordinates::new(
-                map.size.width().scale8(rect.top_left.x) + map.size.left(),
-                map.size.height().scale8(rect.top_left.y) + map.size.top()
+                map.size.width() * Fract8::from_raw(rect.top_left.x) + map.size.left(),
+                map.size.height() * Fract8::from_raw(rect.top_left.y) + map.size.top()
             ),
             Coordinates::new(
-                map.size.width().scale8(rect.bottom_right.x) + map.size.left(),
-                map.size.height().scale8(rect.bottom_right.y) + map.size.top()
+                map.size.width() * Fract8::from_raw(rect.bottom_right.x) + map.size.left(),
+                map.size.height() * Fract8::from_raw(rect.bottom_right.y) + map.size.top()
             )
         );
         debug_assert!(

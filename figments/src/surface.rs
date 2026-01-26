@@ -1,3 +1,4 @@
+use crate::liber8tion::interpolate::Fract8;
 use crate::prelude::*;
 
 use spin::Mutex;
@@ -26,7 +27,7 @@ impl<U, Space: CoordinateSpace, Pixel> Debug for ShaderBinding<U, Space, Pixel> 
 struct ShaderBinding<U, Space: CoordinateSpace, Pixel> {
     shader: Option<Box<dyn Shader<U, Space, Pixel>>>,
     rect: Rectangle<Space>,
-    opacity: u8,
+    opacity: Fract8,
     visible: bool,
     offset: Coordinates<Space>
 }
@@ -35,7 +36,7 @@ struct SurfaceUpdate<U, Space: CoordinateSpace, Pixel> {
     #[allow(clippy::type_complexity)]
     shader: Option<Option<Box<dyn Shader<U, Space, Pixel>>>>,
     rect: Option<Rectangle<Space>>,
-    opacity: Option<u8>,
+    opacity: Option<Fract8>,
     visible: Option<bool>,
     offset: Option<Coordinates<Space>>,
     slot: usize,
@@ -126,7 +127,7 @@ impl<U, Space: CoordinateSpace, Pixel> Surface for BufferedSurface<U, Space, Pix
         }).unwrap();
     }
 
-    fn set_opacity(&mut self, opacity: u8) {
+    fn set_opacity(&mut self, opacity: Fract8) {
         self.updater.push(SurfaceUpdate {
             opacity: Some(opacity),
             slot: self.slot,
@@ -243,7 +244,7 @@ impl<U: 'static, Space: CoordinateSpace, Pixel> ShaderChain<U, Space, Pixel> {
     fn new_surface(&mut self, area: Rectangle<Space>) -> Result<BufferedSurface<U, Space, Pixel>, ()> {
         let next_slot = self.bindings.len();
         self.bindings.push(ShaderBinding {
-            opacity: 255,
+            opacity: Fract8::MAX,
             shader: None,
             rect: area,
             visible: true,
@@ -285,7 +286,7 @@ impl<U: 'static, Space: CoordinateSpace + core::fmt::Debug, Pixel: 'static + Deb
             S: Sample<'a, Space, Output = HwPixel> + ?Sized {
         for surface in &self.pool.bindings {
             let opacity = surface.opacity;
-            if opacity > 0 && surface.visible {
+            if opacity > Fract8::MIN && surface.visible {
                 if let Some(ref shader) = surface.shader {
                     let rect = &surface.rect;
                     for (virt_coords, output_pixel) in output.sample(rect) {
@@ -315,7 +316,7 @@ pub trait Surfaces {
 pub struct SurfaceBuilder<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF: Shader<U, <SS::Surface as Surface>::CoordinateSpace, Pixel>, U, Pixel> {
     surfaces: &'a mut SS,
     rect: Option<Rectangle<<SS::Surface as Surface>::CoordinateSpace>>,
-    opacity: Option<u8>,
+    opacity: Option<Fract8>,
     shader: Option<SF>,
     visible: Option<bool>
 }
@@ -333,7 +334,7 @@ impl<'a, S: Surface<Uniforms = U, Pixel = Pixel>, SS: Surfaces<Surface = S>, SF:
     }
 
     /// Sets the initial opacity
-    pub fn opacity(mut self, opacity: u8) -> Self {
+    pub fn opacity(mut self, opacity: Fract8) -> Self {
         self.opacity = Some(opacity);
         self
     }
@@ -403,7 +404,7 @@ pub trait Surface {
     fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>);
 
     /// Sets the opacity of this surface, where 0 is completely transparent and 255 is completely opaque
-    fn set_opacity(&mut self, opacity: u8);
+    fn set_opacity(&mut self, opacity: Fract8);
 
     /// Sets the visibility of the surface without adjusting the stored opacity
     fn set_visible(&mut self, visible: bool);
@@ -431,7 +432,7 @@ impl<T: DerefMut<Target = S>, S: Surface> Surface for [T] {
         self.iter_mut().for_each(|f| { f.set_rect(rect); });
     }
 
-    fn set_opacity(&mut self, opacity: u8) {
+    fn set_opacity(&mut self, opacity: Fract8) {
         self.iter_mut().for_each(|f| { f.set_opacity(opacity); });
     }
 
@@ -493,7 +494,7 @@ impl<U, Space: CoordinateSpace, P> Surface for NullSurface<U, Space, P> {
 
     fn set_rect(&mut self, rect: Rectangle<Self::CoordinateSpace>) {}
 
-    fn set_opacity(&mut self, opacity: u8) {}
+    fn set_opacity(&mut self, opacity: Fract8) {}
 
     fn set_visible(&mut self, visible: bool) {}
 
@@ -532,14 +533,14 @@ mod test {
         // New surfaces should default to visible
         assert_eq!(c.bindings[0].visible, true);
         sfc.set_visible(false);
-        sfc.set_opacity(128);
+        sfc.set_opacity(Fract8::from_raw(128));
         // Surfaces require a commit before changes are visible on the bindings
         assert_eq!(c.bindings[0].visible, true);
-        assert_eq!(c.bindings[0].opacity, 255);
+        assert_eq!(c.bindings[0].opacity, Fract8::MAX);
         c.commit();
         // Committing changes should update bindings
         assert_eq!(c.bindings[0].visible, false);
-        assert_eq!(c.bindings[0].opacity, 128);
+        assert_eq!(c.bindings[0].opacity, Fract8::from_raw(128));
     }
 
     #[test]

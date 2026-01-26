@@ -7,7 +7,7 @@ mod sin_table;
 
 use rgb::{Rgb, Rgba};
 
-use crate::liber8tion::interpolate::Fract8Ops;
+use crate::liber8tion::interpolate::Fract8;
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Hsv {
@@ -75,12 +75,6 @@ fn qsub8(i: u8, j: u8) -> u8 {
     } else {
         t as u8
     }
-}
-
-macro_rules! FIXFRAC8 {
-    ($a:expr, $b:expr) => {
-        (($a as u16 * 256) / $b as u16) as u8
-    };
 }
 
 // Pre-defined hue values for CHSV objects
@@ -217,15 +211,15 @@ impl From<Rgb<u8>> for Hsv {
             if g == 0 {
                 // if green is zero, we're in Purple/Pink-Red
                 h = (HUE_PURPLE.wrapping_add(HUE_PINK)) / 2;
-                h += qsub8(r, 128).scale8(FIXFRAC8!(48,128));
+                h += qsub8(r, 128) * Fract8::from_ratio(48,128);
             } else if (r - g) > g {
                 // if R-G > G then we're in Red-Orange
                 h = HUE_RED;
-                h += g.scale8(FIXFRAC8!(32,85));
+                h += g * Fract8::from_ratio(32,85);
             } else {
                 // R-G < G, we're in Orange-Yellow
                 h = HUE_ORANGE;
-                h += qsub8((g.wrapping_sub(85)).wrapping_add(171u8.wrapping_sub(r)), 4).scale8(FIXFRAC8!(32,85)); //221
+                h += qsub8((g.wrapping_sub(85)).wrapping_add(171u8.wrapping_sub(r)), 4) * Fract8::from_ratio(32,85); //221
             }
             
         } else if highest == g {
@@ -236,8 +230,8 @@ impl From<Rgb<u8>> for Hsv {
                 //   G = 171..255
                 //   R = 171..  0
                 h = HUE_YELLOW;
-                let radj = qsub8(171,r).scale8(47); //171..0 -> 0..171 -> 0..31
-                let gadj = qsub8(g,171).scale8(96); //171..255 -> 0..84 -> 0..31;
+                let radj = qsub8(171,r) * Fract8::from_raw(47); //171..0 -> 0..171 -> 0..31
+                let gadj = qsub8(g,171) * Fract8::from_raw(96); //171..255 -> 0..84 -> 0..31;
                 let rgadj = radj + gadj;
                 let hueadv = rgadj / 2;
                 h += hueadv;
@@ -247,10 +241,10 @@ impl From<Rgb<u8>> for Hsv {
                 // if Blue is nonzero we're in Green-Aqua
                 if (g-b) > b {
                     h = HUE_GREEN;
-                    h += b.scale8(FIXFRAC8!(32,85));
+                    h += b * Fract8::from_ratio(32,85);
                 } else {
                     h = HUE_AQUA;
-                    h += qsub8(b, 85).scale8(FIXFRAC8!(8,42));
+                    h += qsub8(b, 85) * Fract8::from_ratio(8,42);
                 }
             }
             
@@ -260,15 +254,15 @@ impl From<Rgb<u8>> for Hsv {
             if r == 0 {
                 // if red is zero, we're in Aqua/Blue-Blue
                 h = HUE_AQUA + ((HUE_BLUE - HUE_AQUA) / 4);
-                h += qsub8(b, 128).scale8(FIXFRAC8!(24,128));
+                h += qsub8(b, 128) * Fract8::from_ratio(24,128);
             } else if (b-r) > r {
                 // B-R > R, we're in Blue-Purple
                 h = HUE_BLUE;
-                h += r.scale8(FIXFRAC8!(32,85));
+                h += r * Fract8::from_ratio(32,85);
             } else {
                 // B-R < R, we're in Purple-Pink
                 h = HUE_PURPLE;
-                h += qsub8(r, 85).scale8(FIXFRAC8!(32,85));
+                h += qsub8(r, 85) * Fract8::from_ratio(32,85);
             }
         }
         
@@ -293,7 +287,7 @@ impl Into<Rgb<u8>> for Hsv {
             return Rgb::new(self.value, self.value, self.value)
         }
 
-        let mock_hue = 191.scale8(self.hue);
+        let mock_hue = 191u8 * Fract8::from_raw(self.hue);
         let value: u8 = self.value;
         let saturation: u8 = self.saturation;
         let invsat: u8 = 255 - saturation;

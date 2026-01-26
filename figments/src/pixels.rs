@@ -14,8 +14,8 @@ macro_rules! rgb_pixel_sink {
             #[inline(always)]
             fn add(&mut self, pixel: $src_pixel<u8>, opacity: Fract8) {
                 match opacity {
-                    0 => (),
-                    255 => *self = Self { r: pixel.r, g: pixel.g, b: pixel.b },
+                    Fract8::MIN => (),
+                    Fract8::MAX => *self = Self { r: pixel.r, g: pixel.g, b: pixel.b },
                     _ => *self = self.blend8(Self { r: pixel.r, g: pixel.g, b: pixel.b }, opacity)
                 }
             }
@@ -29,9 +29,9 @@ macro_rules! rgba_pixel_sink {
             #[inline(always)]
             fn add(&mut self, pixel: $src_pixel<u8>, opacity: Fract8) {
                 match opacity {
-                    0 => (),
-                    255 => *self = Self { r: pixel.r, g: pixel.g, b: pixel.b },
-                    _ => *self = self.blend8(Self { r: pixel.r, g: pixel.g, b: pixel.b }, pixel.a.scale8(opacity))
+                    Fract8::MIN => (),
+                    Fract8::MAX => *self = Self { r: pixel.r, g: pixel.g, b: pixel.b },
+                    _ => *self = self.blend8(Self { r: pixel.r, g: pixel.g, b: pixel.b }, Fract8::from_raw(pixel.a * opacity))
                 }
             }
         }
