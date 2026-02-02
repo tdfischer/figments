@@ -1,7 +1,7 @@
 #![cfg(feature="embedded-graphics")]
 use embedded_graphics::{pixelcolor::BinaryColor, prelude::{Dimensions, DrawTarget}, Pixel};
 
-use crate::prelude::*;
+use crate::{liber8tion::interpolate::Fract8, prelude::*};
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Matrix2DSpace {}
@@ -29,7 +29,7 @@ impl<'a, T> DrawTarget for EmbeddedGraphicsSampler<'a, T> where T: Sample<'a, Ma
         for pix in pixels {
             let rect = Rectangle::new(Coordinates::new(pix.0.x, pix.0.y), Coordinates::new(pix.0.x, pix.0.y));
             for (coords, fpix) in self.0.sample(&rect) {
-                fpix.add(pix.1, 255);
+                fpix.add(pix.1, Fract8::MAX);
             }
         }
 
