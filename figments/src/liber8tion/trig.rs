@@ -36,3 +36,13 @@ impl Trig8 for i32 {
         ((self % 255) as u8).cos8()
     }
 }
+
+impl Trig8 for f32 {
+    fn sin8(self) -> Fract8 {
+        (self as u8).sin8()
+    }
+
+    fn cos8(self) -> Fract8 {
+        (self as u8).cos8()
+    }
+}
