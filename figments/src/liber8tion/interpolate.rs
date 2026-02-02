@@ -1,6 +1,6 @@
-use core::ops::{Add, BitOr, Mul, Sub};
+use core::ops::{Add, BitOr, Div, Mul, Sub};
 
-use num::traits::WrappingAdd;
+use num::traits::{WrappingAdd, WrappingMul};
 use rgb::*;
 
 use crate::liber8tion::trig::Trig8;
@@ -9,6 +9,12 @@ use crate::liber8tion::trig::Trig8;
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Fract8(u8);
+
+impl core::fmt::Display for Fract8 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl Fract8 {
     pub const MAX: Fract8 = Fract8(u8::MAX);
@@ -34,6 +40,12 @@ impl Fract8 {
 impl WrappingAdd for Fract8 {
     fn wrapping_add(&self, v: &Self) -> Self {
         Fract8(self.0.wrapping_add(v.0))
+    }
+}
+
+impl WrappingMul for Fract8 {
+    fn wrapping_mul(&self, v: &Self) -> Self {
+        Fract8(self.0.wrapping_mul(v.0))
     }
 }
 
@@ -87,6 +99,22 @@ impl Mul<Fract8> for u8 {
     #[inline]
     fn mul(self, rhs: Fract8) -> Self::Output {
         (self as f32 * (rhs.0 as f32 / 255f32)) as u8
+    }
+}
+
+impl Div<u8> for Fract8 {
+    type Output = Fract8;
+
+    fn div(self, rhs: u8) -> Self::Output {
+        Fract8(self.0 / rhs)
+    }
+}
+
+impl Mul<Fract8> for f32 {
+    type Output = f32;
+
+    fn mul(self, rhs: Fract8) -> Self::Output {
+        self * (rhs.0 as f32 / 255f32)
     }
 }
 
