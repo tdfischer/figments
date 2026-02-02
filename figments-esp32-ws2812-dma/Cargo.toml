@@ -1,0 +1,31 @@
+[package]
+name = "figments-esp32-ws2812-dma"
+description = "Figments esp32 display driver for the ws2812 chips using DMA"
+readme = "README.md"
+repository = "https://github.com/tdfischer/figments"
+keywords = ["ws2812", "esp32", "smart-leds"]
+categories = ["graphics", "embedded"]
+version = "0.0.3"
+authors = ["tdfischer"]
+edition = "2024"
+rust-version = "1.92"
+license = "LGPL-2.1-or-later"
+
+[lib]
+name = "figments_esp32_ws2812_dma"
+
+[features]
+default = []
+esp32 = ["esp-hal/esp32"]
+esp32c2 = ["esp-hal/esp32c2"]
+esp32c3 = ["esp-hal/esp32c3"]
+esp32c6 = ["esp-hal/esp32c6"]
+esp32h2 = ["esp-hal/esp32h2"]
+esp32s2 = ["esp-hal/esp32s2"]
+esp32s3 = ["esp-hal/esp32s3"]
+
+[dependencies]
+critical-section = "1.2.0"
+esp-hal = { version = "1.0.0", default-features = false, features = ["requires-unstable"] }
+rgb = "0.8"
+smart-leds-trait = "0.3.2"
