@@ -1,3 +1,4 @@
 [workspace]
-resolver = "2"
-members = ["figments", "figments-esp32-examples", "figments-esp32-idf-examples", "figments-render", "figments-sample-shaders"]
+resolver = "3"
+members = ["figments", "figments-*"]
+default-members = ["figments", "figments-render", "figments-sample-shaders", "figments-esp32-ws2812-dma"]
